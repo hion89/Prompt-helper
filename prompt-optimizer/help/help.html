@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Prompt Optimizer 사용 설명서</title>
+  <link rel="stylesheet" href="help.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div>
+        <p class="eyebrow">PROMPT OPTIMIZER GUIDE</p>
+        <h1>처음부터 문제 해결까지</h1>
+        <p class="lead">Gemini API 키 등록, 프롬프트 최적화, AI 입력창 연결 문제를 이 탭에서 확인할 수 있습니다.</p>
+      </div>
+      <a class="settings-link" href="../options/options.html">Gemini API 설정 열기</a>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav aria-label="설명서 목차">
+      <strong>목차</strong>
+      <a href="#start">처음 시작하기</a>
+      <a href="#use">기본 사용법</a>
+      <a href="#modes">모드 선택</a>
+      <a href="#toolbar">미니 도구</a>
+      <a href="#problems">상황별 해결</a>
+      <a href="#privacy">키와 데이터</a>
+    </nav>
+
+    <main>
+      <section id="start">
+        <span class="step-label">START</span>
+        <h2>처음 시작하기</h2>
+        <ol class="steps">
+          <li><b>Gemini API 키를 준비합니다.</b><span>팝업에서 <em>Gemini API 설정</em>을 열고 Google AI Studio에서 발급한 키를 등록하세요.</span></li>
+          <li><b>사용할 모델을 확인합니다.</b><span><em>사용 가능한 모델 조회</em>를 누른 뒤 Flash 또는 Flash-Lite 모델을 선택하고 저장하세요.</span></li>
+          <li><b>AI 페이지를 새로고침합니다.</b><span>확장 프로그램을 처음 설치하거나 업데이트했다면 열려 있던 ChatGPT·Claude·Gemini·Perplexity 탭을 한 번 새로고침하세요.</span></li>
+          <li><b>평소처럼 요청을 작성합니다.</b><span>확장 팝업에 직접 쓰거나 AI 페이지 입력창에 작성한 뒤 가져올 수 있습니다.</span></li>
+        </ol>
+        <div class="callout"><b>알아두세요.</b> Gemini는 프롬프트를 재작성하는 엔진입니다. <em>대상 AI</em>는 완성된 프롬프트를 사용할 ChatGPT·Claude·Gemini·Perplexity 중 하나를 뜻합니다.</div>
+      </section>
+
+      <section id="use">
+        <span class="step-label">BASIC</span>
+        <h2>기본 사용법</h2>
+        <div class="cards">
+          <article><span>1</span><h3>요청 준비</h3><p>팝업에 입력하거나 <b>페이지에서 가져오기</b>로 AI 입력창의 글을 불러옵니다.</p></article>
+          <article><span>2</span><h3>설정 선택</h3><p>대상 AI, 응답 언어, Default·ECO·Precision·Natural 모드를 선택합니다.</p></article>
+          <article><span>3</span><h3>최적화</h3><p><b>Optimize Prompt</b>를 누르고 Gemini가 재작성한 결과를 확인합니다.</p></article>
+          <article><span>4</span><h3>사용</h3><p><b>Copy</b>로 복사하거나 <b>Replace</b>로 연결된 입력창의 내용만 교체합니다.</p></article>
+        </div>
+        <p class="note">Replace와 미니 도구의 Optimize는 메시지를 자동 전송하지 않습니다. 결과를 읽어 본 뒤 AI 사이트에서 직접 전송하세요.</p>
+      </section>
+
+      <section id="modes">
+        <span class="step-label">MODES</span>
+        <h2>어떤 모드를 선택할까요?</h2>
+        <div class="mode-list">
+          <div><b>Default</b><span>일반 질문, 요약, 글쓰기처럼 대부분의 요청에 사용합니다.</span></div>
+          <div><b>ECO</b><span>핵심 조건을 유지하면서 짧은 프롬프트가 필요할 때 사용합니다.</span></div>
+          <div><b>Precision</b><span>코드 분석, 오류 진단, 비교처럼 조건과 검증 기준이 중요할 때 사용합니다.</span></div>
+          <div><b>Natural</b><span>메일, 게시글, 대화문처럼 자연스러운 표현이 중요할 때 사용합니다.</span></div>
+        </div>
+      </section>
+
+      <section id="toolbar">
+        <span class="step-label">TOOLBAR</span>
+        <h2>AI 입력창 옆 미니 도구</h2>
+        <ul>
+          <li><b>✦ Optimize:</b> 현재 입력창 내용을 최적화한 결과로 교체합니다.</li>
+          <li><b>↶ Undo:</b> 방금 교체한 내용을 원문으로 되돌립니다.</li>
+          <li><b>⠿:</b> 끌어서 원하는 위치로 옮깁니다. 더블클릭하면 입력창 옆 기본 위치로 돌아갑니다.</li>
+          <li><b>×:</b> 미니 도구를 숨깁니다. 다시 켜려면 확장 팝업의 <em>페이지 미니 도구</em>를 켜세요.</li>
+        </ul>
+      </section>
+
+      <section id="problems">
+        <span class="step-label">HELP</span>
+        <h2>특정 상황에서는 이렇게 하세요</h2>
+        <div class="troubleshooting">
+          <details open>
+            <summary>입력창 연결 안 됨 또는 입력창을 찾지 못함</summary>
+            <ol>
+              <li>AI 페이지의 입력창을 한 번 클릭합니다.</li>
+              <li>팝업 아래의 <b>↻ 다시 찾기</b>를 누릅니다.</li>
+              <li>계속 실패하면 <b>페이지 새로고침</b>을 누르고 페이지가 열린 뒤 팝업을 다시 엽니다.</li>
+              <li>확장 프로그램을 막 업데이트했다면 모든 AI 페이지를 새로고침하세요.</li>
+            </ol>
+          </details>
+          <details>
+            <summary>미니 도구가 보이지 않음</summary>
+            <p>팝업에서 <b>페이지 미니 도구</b>가 켜져 있는지 확인하고 입력창을 클릭하세요. 그래도 보이지 않으면 다시 찾기와 페이지 새로고침을 차례로 사용하세요.</p>
+          </details>
+          <details>
+            <summary>Replace 버튼을 누를 수 없음</summary>
+            <p>먼저 지원 AI 페이지에서 <b>페이지에서 가져오기</b>를 눌러 현재 입력창을 연결하세요. 가져온 뒤 페이지 내용을 직접 수정했다면 안전을 위해 연결이 해제되므로 다시 가져와야 합니다.</p>
+          </details>
+          <details>
+            <summary>Extension context invalidated 오류</summary>
+            <p>확장 프로그램을 업데이트한 뒤 기존 탭에 예전 스크립트가 남아 생깁니다. 확장 관리 화면과 AI 페이지를 각각 새로고침하세요. 오류 페이지에 남은 과거 기록은 휴지통 아이콘으로 지울 수 있습니다.</p>
+          </details>
+          <details>
+            <summary>HTTP 404 또는 NOT_FOUND</summary>
+            <p>저장된 Gemini 모델을 현재 키에서 사용할 수 없습니다. API 설정에서 <b>사용 가능한 모델 조회</b>를 누르고 목록에 표시된 생성 모델을 선택해 저장하세요. 키를 반복 발급할 필요는 없습니다.</p>
+          </details>
+          <details>
+            <summary>HTTP 429 또는 RESOURCE_EXHAUSTED</summary>
+            <p>무료 등급의 분당·일일 호출 또는 토큰 할당량에 도달했을 가능성이 큽니다. Google AI Studio에서 사용량을 확인하고 한도가 복구된 뒤 다시 시도하세요. 확장 프로그램은 유료 등급이나 다른 모델로 자동 전환하지 않습니다.</p>
+          </details>
+          <details>
+            <summary>HTTP 401·403 또는 인증 오류</summary>
+            <p>키가 잘못됐거나 프로젝트·모델 권한이 없는 상태입니다. API 설정에서 키를 삭제하고 올바른 Gemini API 키를 등록한 뒤 Chrome의 연결 권한을 허용하세요.</p>
+          </details>
+          <details>
+            <summary>결과가 의도와 다름</summary>
+            <p>원문에 반드시 지켜야 할 조건, 원하는 결과 형식, 제외할 내용을 구체적으로 추가하세요. 정확한 분석에는 Precision, 짧은 결과에는 ECO를 선택해 다시 최적화하세요. 결과는 적용 전에 항상 검토하세요.</p>
+          </details>
+        </div>
+      </section>
+
+      <section id="privacy">
+        <span class="step-label">DATA</span>
+        <h2>API 키와 데이터</h2>
+        <ul>
+          <li>Optimize를 누를 때 원문과 선택 설정이 Gemini API로 전송됩니다.</li>
+          <li>키는 기본적으로 브라우저 세션 동안만 보관됩니다. 영구 저장을 선택하면 현재 Chrome 프로필의 로컬 저장소에 저장됩니다.</li>
+          <li>초안은 동기화 저장소에 올리지 않으며 Reset으로 바로 지울 수 있습니다.</li>
+          <li>무료 등급 여부와 한도는 Google 프로젝트 상태에 따라 달라집니다.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+
+  <footer>Prompt Optimizer 1.7.0 · 이 설명서는 팝업과 Gemini API 설정 화면에서 언제든 다시 열 수 있습니다.</footer>
+</body>
+</html>
