@@ -101,7 +101,7 @@ try {
   const stub = [
     "window.__listeners=[]; window.__settings={targetModel:'chatgpt',responseLanguage:'ko',mode:'precision',theme:'light'};",
     'window.__result=' + JSON.stringify(compiled) + '; window.__delay=0; window.__submitted=0; window.__keydown=0; window.__runtimeMessages=[];',
-    "window.chrome={runtime:{id:'fixture-extension',getURL:p=>'/'+p,getManifest:()=>({name:'Prompt Optimizer',version:'1.8.0'}),onMessage:{addListener:fn=>__listeners.push(fn)},sendMessage:async m=>{__runtimeMessages.push(m);await new Promise(r=>setTimeout(r,__delay));return m.type==='SET_TOOLBAR_STATE'?{ok:true}:{ok:true,result:__result}}},",
+    "window.chrome={runtime:{id:'fixture-extension',getURL:p=>'/'+p,getManifest:()=>({name:'Prompt Optimizer',version:'1.9.0'}),onMessage:{addListener:fn=>__listeners.push(fn)},sendMessage:async m=>{__runtimeMessages.push(m);await new Promise(r=>setTimeout(r,__delay));return m.type==='SET_TOOLBAR_STATE'?{ok:true}:m.type==='API_STATUS'?{ok:true,status:{gemini:{configured:true}}}:{ok:true,result:__result}}},",
     "storage:{local:{get:async()=>({settings:__settings}),set:async v=>Object.assign(__settings,v.settings)},session:{get:async()=>({}),set:async()=>{},remove:async()=>{}},onChanged:{addListener:()=>{}}},",
     "tabs:{query:async()=>[{id:1}],sendMessage:async()=>({ok:false,error:'연결된 AI 입력창이 없습니다.'}),reload:async id=>{window.__reloads=(window.__reloads||0)+1;window.__reloadedTab=id}}};",
     "window.__message=m=>new Promise(resolve=>{let waiting=false;for(const fn of __listeners){if(fn(m,{id:chrome.runtime.id},resolve)===true)waiting=true;}if(!waiting)setTimeout(()=>resolve(undefined),100);});",
@@ -196,11 +196,18 @@ try {
   pass('Beginner guide is always reachable and includes responsive troubleshooting');
   const diagnostics = await page(base + '/diagnostics/diagnostics.html', stub);
   await diagnostics.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 760, deviceScaleFactor: 1, mobile: true });
-  await until(() => diagnostics.evaluate('document.querySelector("#version")?.textContent.includes("1.8.0")'), 'diagnostics load');
+  await until(() => diagnostics.evaluate('document.querySelector("#version")?.textContent.includes("1.9.0")'), 'diagnostics load');
   assert.equal(await diagnostics.evaluate('document.querySelectorAll("#copy-report,#download-report,#report-file").length'), 3);
   assert.equal(await diagnostics.evaluate('document.documentElement.scrollWidth<=innerWidth'), true, 'Diagnostics has no horizontal overflow');
   assert.equal(await popup.evaluate('document.querySelector("#diagnostics-link")?.target'), '_blank');
   pass('Diagnostic report export and reviewer import are always reachable');
+  const evaluation = await page(base + '/evaluation/evaluation.html', stub);
+  await evaluation.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 760, deviceScaleFactor: 1, mobile: true });
+  await until(() => evaluation.evaluate('document.querySelector("#status")?.textContent.includes("준비됨")'), 'evaluation load');
+  assert.equal(await evaluation.evaluate('document.querySelectorAll("#start,#stop,#download").length'), 3);
+  assert.equal(await evaluation.evaluate('document.documentElement.scrollWidth<=innerWidth'), true, 'Evaluation has no horizontal overflow');
+  assert.equal(await evaluation.evaluate('document.querySelector("#start")?.disabled'), false);
+  pass('Live benchmark is reachable and explains its API usage');
   assert.deepEqual(errors, []); assert.deepEqual(popupErrors, []);
   const { targetInfos } = await browserCDP.send('Target.getTargets');
   const worker = targetInfos.find(t => t.type === 'service_worker' && t.url.startsWith('chrome-extension://'));

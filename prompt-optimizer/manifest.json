@@ -1,12 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Prompt Optimizer",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "개인 Gemini API 키로 자연어 요청을 분석해 맞춤 프롬프트로 재작성합니다.",
   "minimum_chrome_version": "112",
   "permissions": [
-    "storage",
-    "activeTab"
+    "storage"
   ],
   "background": {
     "service_worker": "background/background.js",

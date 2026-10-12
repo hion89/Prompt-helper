@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Prompt Optimizer 성능 평가</title>
+  <link rel="stylesheet" href="evaluation.css">
+  <script type="module" src="evaluation.js"></script>
+</head>
+<body>
+  <header>
+    <div><p class="eyebrow">PROMPT OPTIMIZER BENCHMARK</p><h1>성능 평가</h1><p class="lead">동일한 시험 요청으로 버전과 모델별 품질·속도·토큰 사용량을 비교합니다.</p></div>
+    <div class="links"><a href="../help/help.html">사용 설명서</a><a href="../options/options.html">Gemini API 설정</a></div>
+  </header>
+  <main>
+    <section class="card intro-card">
+      <div><span class="tag">LIVE TEST</span><h2>실제 Gemini 최적화 8회</h2></div>
+      <p>내장된 요청 8개를 차례로 최적화합니다. 등록된 개인 API 키와 현재 선택한 Gemini 모델을 사용하며 호출·토큰 한도가 차감될 수 있습니다. 시험 문장만 전송하고 개인 프롬프트는 사용하지 않습니다.</p>
+      <div class="formula"><b>자동 품질 점수</b><span>핵심 정보 보존 45% + 의도 분류 20% + 프롬프트 언어 20% + 불필요한 서두 없음 15%</span></div>
+      <p class="caveat">자동 점수는 회귀 비교용 지표입니다. 실제 AI 답변의 사실성이나 유용성을 직접 보장하지 않으므로 각 출력도 함께 확인하세요.</p>
+      <div class="actions"><button id="start" type="button">평가 시작</button><button id="stop" class="secondary" type="button" disabled>현재 항목 후 중지</button><button id="download" class="secondary" type="button" disabled>결과 JSON 저장</button></div>
+      <p id="status" role="status" aria-live="polite">API 상태를 확인하고 있습니다.</p>
+      <div class="progress" aria-hidden="true"><span id="progress"></span></div>
+    </section>
+
+    <section id="summary-card" class="card" hidden>
+      <span class="tag">SUMMARY</span><h2>측정 결과</h2>
+      <div id="summary" class="summary"></div>
+      <p class="legend">응답시간은 네트워크와 Gemini 서버 상태의 영향을 받습니다. 여러 번 실행해 중앙값을 비교하는 것이 좋습니다.</p>
+    </section>
+
+    <section class="card">
+      <span class="tag">CASES</span><h2>시험 항목</h2>
+      <div class="table-wrap"><table><thead><tr><th>항목</th><th>상태</th><th>점수</th><th>보존</th><th>의도</th><th>언어</th><th>시간</th><th>토큰</th></tr></thead><tbody id="results"></tbody></table></div>
+      <div id="details" class="details"></div>
+    </section>
+  </main>
+  <footer>평가 결과와 시험 출력은 이 화면의 메모리에만 유지되며 자동 전송되지 않습니다.</footer>
+</body>
+</html>

@@ -5,7 +5,7 @@ import { DIAGNOSTIC_KEY, MAX_DIAGNOSTICS, sanitizeDiagnosticMessage, recordDiagn
 test('diagnostics redact secrets, cap history, and can be cleared', async () => {
   const stored = {};
   globalThis.chrome = {
-    runtime: { getManifest: () => ({ version: '1.8.0' }) },
+    runtime: { getManifest: () => ({ version: '1.9.0' }) },
     storage: { local: {
       async get(key) { return { [key]: structuredClone(stored[key]) }; },
       async set(value) { Object.assign(stored, structuredClone(value)); },
@@ -22,7 +22,7 @@ test('diagnostics redact secrets, cap history, and can be cleared', async () => 
   assert.equal(events.length, MAX_DIAGNOSTICS);
   assert.equal(events[0].action, 'test-5');
   assert(events.every(event => !event.message.includes(secret)));
-  assert.equal(events.at(-1).version, '1.8.0');
+  assert.equal(events.at(-1).version, '1.9.0');
   await clearDiagnostics();
   assert.equal(DIAGNOSTIC_KEY in stored, false);
   delete globalThis.chrome;

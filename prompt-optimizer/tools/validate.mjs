@@ -8,7 +8,7 @@ const read = p => readFile(path.join(root, p), 'utf8');
 const manifest = JSON.parse(await read('manifest.json'));
 assert.equal(manifest.manifest_version, 3);
 assert.equal(manifest.background.type, 'module');
-assert.deepEqual([...manifest.permissions].sort(), ['activeTab', 'storage']);
+assert.deepEqual([...manifest.permissions].sort(), ['storage']);
 assert(!manifest.host_permissions, 'Static matching content scripts need no additional host permission.');
 assert(!manifest.externally_connectable);
 assert(!manifest.web_accessible_resources);
@@ -51,7 +51,7 @@ for (const file of files) {
     assert(!/\bfetch\s*\(|XMLHttpRequest|WebSocket/.test(source) || file.endsWith('remote-optimizer.js'), 'Unexpected network request: ' + file);
   }
 }
-for (const htmlPath of [manifest.action.default_popup, manifest.options_ui.page, 'help/help.html', 'diagnostics/diagnostics.html']) {
+for (const htmlPath of [manifest.action.default_popup, manifest.options_ui.page, 'help/help.html', 'diagnostics/diagnostics.html', 'evaluation/evaluation.html']) {
   const html = await read(htmlPath);
   assert(!/<script(?![^>]*\bsrc=)[^>]*>/i.test(html), 'No inline scripts.');
   assert(!/\son\w+\s*=/i.test(html), 'No inline handlers.');

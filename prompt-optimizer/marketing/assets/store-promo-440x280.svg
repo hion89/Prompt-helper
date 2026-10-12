@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="280" viewBox="0 0 440 280">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#10271f"/><stop offset="1" stop-color="#245f4c"/></linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b9f2cf" stop-opacity=".34"/><stop offset="1" stop-color="#b9f2cf" stop-opacity="0"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="9" stdDeviation="10" flood-color="#06130e" flood-opacity=".32"/></filter>
+  </defs>
+  <rect width="440" height="280" fill="url(#bg)"/>
+  <circle cx="407" cy="22" r="145" fill="url(#glow)"/>
+  <circle cx="34" cy="268" r="96" fill="#83d7a5" opacity=".09"/>
+  <g transform="translate(32 31)" filter="url(#shadow)">
+    <rect width="72" height="72" rx="19" fill="#1d6a56"/>
+    <path d="M19 25l18 16-18 16" fill="none" stroke="#f4fff8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M42 57h16" stroke="#f4fff8" stroke-width="6" stroke-linecap="round"/>
+    <path d="M52 13l9 13-9 13-9-13z" fill="#a8ebc2"/>
+  </g>
+  <text x="32" y="137" fill="#a8ebc2" font-family="Segoe UI, Malgun Gothic, sans-serif" font-size="12" font-weight="700" letter-spacing="2.2">PROMPT OPTIMIZER</text>
+  <text x="32" y="174" fill="#ffffff" font-family="Segoe UI, Malgun Gothic, sans-serif" font-size="29" font-weight="800">생각은 그대로,</text>
+  <text x="32" y="210" fill="#ffffff" font-family="Segoe UI, Malgun Gothic, sans-serif" font-size="29" font-weight="800">요청은 더 명확하게.</text>
+  <text x="33" y="242" fill="#cfe4d7" font-family="Segoe UI, Malgun Gothic, sans-serif" font-size="13">자연어 요청을 AI에 맞는 프롬프트로</text>
+</svg>

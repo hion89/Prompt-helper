@@ -1,0 +1,11 @@
+metric,value,unit,note
+total_cases,8,cases,internal fixed benchmark
+completion_rate,100,percent,8 of 8 completed
+quality_score,95.6,points,internal composite out of 100
+preservation_rate,96.2,percent,exact string matching
+intent_accuracy,87.5,percent,7 of 8 heuristic classifications
+language_accuracy,100,percent,8 of 8
+clean_start_rate,100,percent,8 of 8
+latency_median,2251,ms,network and provider dependent
+latency_p95,4709,ms,network and provider dependent
+tokens_average,529,tokens,API usage metadata
