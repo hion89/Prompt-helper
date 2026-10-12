@@ -1,6 +1,7 @@
 import { RemotePromptOptimizer, API_PROVIDERS, listGeminiModels } from '../providers/remote-optimizer.js';
 import { getSettings, normalizeSettings, saveSettings } from '../shared/settings.js';
 import { protectStorage, keyStatus, readKey, saveKey, deleteKey } from './credentials.js';
+import { recordDiagnostic } from '../shared/diagnostics.js';
 
 const allowedHosts = new Set(['chatgpt.com', 'chat.openai.com', 'claude.ai', 'gemini.google.com', 'perplexity.ai', 'www.perplexity.ai']);
 const siteByHost = { 'chatgpt.com': 'chatgpt', 'chat.openai.com': 'chatgpt', 'claude.ai': 'claude', 'gemini.google.com': 'gemini', 'perplexity.ai': 'perplexity', 'www.perplexity.ai': 'perplexity' };
@@ -93,7 +94,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       } finally { remoteBusy = false; }
       sendResponse({ ok: true, result });
     } catch (error) {
-      sendResponse({ ok: false, error: error instanceof Error ? error.message : '최적화하지 못했습니다.' });
+      const errorText = error instanceof Error ? error.message : '최적화하지 못했습니다.';
+      if (validSender(sender)) {
+        let site = 'extension';
+        try { site = isExtensionPage(sender) ? 'extension' : (siteByHost[new URL(sender.url).hostname] || 'supported-site'); } catch {}
+        await recordDiagnostic({ scope: 'background', action: message.type, site, message: errorText }).catch(() => {});
+      }
+      sendResponse({ ok: false, error: errorText });
     }
   })();
   return true;

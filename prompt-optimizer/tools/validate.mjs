@@ -51,12 +51,12 @@ for (const file of files) {
     assert(!/\bfetch\s*\(|XMLHttpRequest|WebSocket/.test(source) || file.endsWith('remote-optimizer.js'), 'Unexpected network request: ' + file);
   }
 }
-for (const htmlPath of [manifest.action.default_popup, manifest.options_ui.page, 'help/help.html']) {
+for (const htmlPath of [manifest.action.default_popup, manifest.options_ui.page, 'help/help.html', 'diagnostics/diagnostics.html']) {
   const html = await read(htmlPath);
   assert(!/<script(?![^>]*\bsrc=)[^>]*>/i.test(html), 'No inline scripts.');
   assert(!/\son\w+\s*=/i.test(html), 'No inline handlers.');
   for (const match of html.matchAll(/(?:src|href)=["']([^"']+)["']/g)) {
-    if (/^(?:#|https?:|data:)/.test(match[1])) continue;
+    if (/^(?:#|https?:|mailto:|data:)/.test(match[1])) continue;
     await access(path.resolve(root, path.dirname(htmlPath), match[1]));
   }
 }

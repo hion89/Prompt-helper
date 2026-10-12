@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS, getSettings, normalizeSettings, saveSettings } from '../shared/settings.js';
+import { recordDiagnostic } from '../shared/diagnostics.js';
 
 const LIMIT = 50_000;
 const inputLimit = () => 12_000;
@@ -36,6 +37,10 @@ let resultMeta = null;
 let draftKey = null;
 let pendingDraft = Promise.resolve();
 let storageWarningShown = false;
+
+function logFailure(action, error) {
+  recordDiagnostic({ scope: 'popup', action, site: snapshot?.site || 'extension', message: errorMessage(error, '알 수 없는 오류') }).catch(() => {});
+}
 
 function feedback(message = '', kind = 'success', reveal = false) {
   ui.feedback.textContent = message;
@@ -189,6 +194,7 @@ async function reconnectPage() {
     snapshot = { text: reply.text, token: reply.token, site: reply.site, canUndo: Boolean(reply.canUndo) };
     feedback('입력창을 다시 찾았습니다. 이제 페이지에서 가져오기나 Replace를 사용할 수 있습니다.');
   } catch (error) {
+    logFailure('reconnect-page', error);
     feedback(`${errorMessage(error, '입력창을 다시 찾지 못했습니다.')} 페이지 입력창을 한 번 클릭한 뒤 다시 찾거나 페이지 새로고침을 눌러 주세요.`, 'error', true);
   } finally {
     pageBusy = false;
@@ -209,6 +215,7 @@ async function reloadPage() {
     await chrome.tabs.reload(tabId);
     feedback('페이지를 새로고침했습니다. 페이지가 열린 뒤 확장 프로그램을 다시 열어 주세요.');
   } catch (error) {
+    logFailure('reload-page', error);
     feedback(errorMessage(error, '페이지를 새로고침하지 못했습니다.'), 'error', true);
   } finally {
     pageBusy = false;
@@ -257,6 +264,7 @@ async function optimize() {
     feedback('최적화했습니다. 내용을 확인한 뒤 복사하거나 입력창에 넣어 주세요.');
     ui.output.scrollIntoView({ block: 'nearest', behavior: 'instant' });
   } catch (error) {
+    logFailure('optimize', error);
     if (revision === currentRevision) {
       clearResult('다시 시도해 주세요');
       feedback(errorMessage(error, '최적화 중 오류가 발생했습니다.'), 'error', true);
@@ -288,6 +296,7 @@ async function importPage() {
     feedback('페이지의 요청을 가져왔습니다. 모드를 고르고 최적화해 보세요.');
     ui.source.focus();
   } catch (error) {
+    logFailure('import-page', error);
     snapshot = null;
     showPage();
     feedback(errorMessage(error, '페이지에서 요청을 가져오지 못했습니다.'), 'error', true);
@@ -308,6 +317,7 @@ async function replacePage() {
     try { await readPage(); } catch { snapshot = null; showPage(); }
     feedback('AI 입력창에 넣었습니다. 내용을 확인한 후 직접 전송해 주세요.', 'success', true);
   } catch (error) {
+    logFailure('replace-page', error);
     // Do not silently accept a new snapshot after a failed compare-and-swap.
     // An explicit import is required before another replacement can occur.
     snapshot = null;
@@ -329,6 +339,7 @@ async function undoPage() {
     try { await readPage(); } catch { snapshot = null; showPage(); }
     feedback('페이지 입력창을 원문으로 복구했습니다.', 'success', true);
   } catch (error) {
+    logFailure('undo-page', error);
     snapshot = null;
     showPage();
     feedback(errorMessage(error, '원문을 복구하지 못했습니다. 페이지 입력창의 내용을 확인해 주세요.'), 'error', true);
