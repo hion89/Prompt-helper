@@ -1,5 +1,6 @@
 import { DEFAULT_SETTINGS, getSettings, normalizeSettings, saveSettings } from '../shared/settings.js';
 import { recordDiagnostic } from '../shared/diagnostics.js';
+import { CUSTOM_CONCEPTS, customConfigurationError } from '../shared/custom.js';
 
 const LIMIT = 50_000;
 const inputLimit = () => 12_000;
@@ -14,6 +15,10 @@ const ui = {
   detail: byId('result-detail'), resultLanguage: byId('result-language'),
   pageStatus: byId('page-status'), feedback: byId('feedback'), toolbarEnabled: byId('toolbar-enabled'),
   reconnectPage: byId('reconnect-page'), reloadPage: byId('reload-page'),
+  apiState: byId('api-state'), apiTitle: byId('api-state-title'), apiDetail: byId('api-state-detail'), apiRoute: byId('api-route'),
+  apiKeyState: byId('api-key-state'), apiPermissionState: byId('api-permission-state'), apiSetup: byId('api-setup'), apiRefresh: byId('api-refresh'), requestRoute: byId('request-route'),
+  custom: byId('custom-options'), customAuto: byId('custom-auto'), customManual: byId('custom-manual'),
+  concepts: byId('custom-concepts'), customInstructions: byId('custom-instructions'), customCount: byId('custom-count'), customSelection: byId('custom-selection'),
 };
 const taskNames = {
   general: '일반 질문', general_question: '일반 질문', question: '일반 질문',
@@ -37,6 +42,67 @@ let resultMeta = null;
 let draftKey = null;
 let pendingDraft = Promise.resolve();
 let storageWarningShown = false;
+let apiState = null;
+let apiChecking = false;
+let apiCheckRevision = 0;
+let apiOutcome = null;
+let pendingSettingWrites = 0;
+
+for (const [id, concept] of Object.entries(CUSTOM_CONCEPTS)) {
+  const label = document.createElement('label');
+  label.className = 'concept-option';
+  const input = document.createElement('input');
+  input.type = 'checkbox'; input.name = 'custom-concept'; input.value = id;
+  const description = document.createElement('span');
+  const title = document.createElement('b'); title.textContent = concept.label;
+  const hint = document.createElement('small'); hint.textContent = concept.hint;
+  description.append(title, hint); label.append(input, description); ui.concepts.append(label);
+}
+
+function paintApiState() {
+  const ready = apiState?.ready === true;
+  let state = !apiState ? (apiChecking ? 'checking' : 'error') : !apiState.configured ? 'missing' : !apiState.granted ? 'permission' : 'ready';
+  let title = { checking: 'API 등록 상태 확인 중…', error: 'API 상태 확인 실패', missing: 'API 키 미등록 · 최적화 불가', permission: 'API 연결 권한 필요', ready: 'API 사용 준비 · 키 등록됨' }[state];
+  let detail = !apiState ? '상태 확인을 눌러 등록 상태를 다시 확인해 주세요.'
+    : !apiState.configured ? '개인 Gemini API 키를 등록하면 최적화를 사용할 수 있습니다.'
+    : !apiState.granted ? 'API 설정에서 Chrome의 Gemini 서버 접근 권한을 허용해 주세요.'
+    : 'Optimize를 누르면 원문과 선택 설정이 Gemini API로 전송됩니다. 인증과 할당량은 실제 요청 시 확인됩니다.';
+  if (ready && optimizing) { state = 'sending'; title = 'Gemini API로 최적화 중…'; detail = '등록한 개인 키를 사용하는 외부 API 최적화를 요청하고 있습니다.'; }
+  else if (ready && apiOutcome?.model === settings.geminiModel) {
+    state = apiOutcome.ok ? 'success' : 'error';
+    title = apiOutcome.ok ? 'Gemini API 응답 확인됨' : '마지막 API 요청 실패';
+    detail = apiOutcome.ok ? '마지막 최적화 결과를 Gemini API에서 받았습니다. 다음 요청도 등록한 키를 사용합니다.' : '키는 등록되어 있습니다. 아래 오류 안내에서 인증·모델·할당량 상태를 확인한 뒤 다시 시도하세요.';
+  }
+  ui.apiState.dataset.state = state;
+  ui.apiTitle.textContent = title;
+  ui.apiDetail.textContent = detail;
+  ui.apiRoute.textContent = ready ? 'Gemini API 사용' : 'API 사용 대기';
+  ui.apiKeyState.textContent = !apiState ? '키 확인 안 됨' : apiState.configured ? '✓ 키 등록 · ' + (apiState.persistent ? '브라우저 저장' : '이번 세션') : '○ 키 미등록';
+  ui.apiPermissionState.textContent = !apiState ? '권한 확인 안 됨' : apiState.granted ? '✓ 서버 접근 허용' : '○ 서버 접근 미허용';
+  ui.apiRefresh.disabled = apiChecking || optimizing;
+  ui.badge.textContent = ready ? 'GEMINI API' : 'API 준비 필요';
+  const customError = customConfigurationError(settings);
+  ui.requestRoute.dataset.state = ready && !customError ? 'ready' : 'blocked';
+  ui.requestRoute.textContent = !ready ? 'API 키와 연결 권한을 확인한 뒤 최적화할 수 있습니다.' : customError || ('전송: 나의 요청' + (settings.mode === 'custom' ? (settings.customType === 'manual' ? ' + 수동 최적화 지침' : ' + 선택한 콘셉트') : ' + 선택 설정') + ' → Gemini API');
+}
+
+async function refreshApiStatus() {
+  const requestRevision = ++apiCheckRevision;
+  apiChecking = true;
+  paint();
+  try {
+    const reply = await chrome.runtime.sendMessage({ type: 'API_STATUS' });
+    if (!reply?.ok || !reply.status?.gemini) throw new Error('API 등록 상태를 확인하지 못했습니다.');
+    if (requestRevision !== apiCheckRevision) return;
+    const next = reply.status.gemini;
+    if (!next.ready || apiState?.configured !== next.configured || apiState?.persistent !== next.persistent) apiOutcome = null;
+    apiState = next;
+  } catch {
+    if (requestRevision === apiCheckRevision) apiState = null;
+  } finally {
+    if (requestRevision === apiCheckRevision) { apiChecking = false; paint(); }
+  }
+}
 
 function logFailure(action, error) {
   recordDiagnostic({ scope: 'popup', action, site: snapshot?.site || 'extension', message: errorMessage(error, '알 수 없는 오류') }).catch(() => {});
@@ -59,12 +125,12 @@ function errorMessage(error, fallback) {
 }
 
 function settingsFingerprint(value = settings) {
-  return JSON.stringify([value.targetModel, value.responseLanguage, value.mode, value.promptLanguage, value.geminiModel]);
+  return JSON.stringify([value.targetModel, value.responseLanguage, value.mode, value.promptLanguage, value.geminiModel,
+    ...(value.mode === 'custom' ? [value.customType, value.customType === 'manual' ? value.customInstructions : value.customConcepts] : [])]);
 }
 
 function paintSettings() {
-  ui.badge.textContent = 'GEMINI API';
-  ui.engineHint.textContent = 'Gemini ' + settings.geminiModel + '로 원문을 전송해 재작성합니다. 무료 여부는 API 프로젝트 등급에 따릅니다.';
+  ui.engineHint.textContent = '사용 모델: ' + settings.geminiModel + ' · 무료 여부와 사용 한도는 API 프로젝트 등급에 따릅니다.';
   ui.processingNote.textContent = 'Gemini API로 전송 · 자동 유료 전환 없음';
   ui.target.value = settings.targetModel;
   ui.language.value = settings.responseLanguage;
@@ -73,6 +139,15 @@ function paintSettings() {
   for (const radio of ui.modes.querySelectorAll('input')) radio.checked = radio.value === settings.mode;
   ui.toolbarEnabled.checked = settings.toolbarEnabled;
   ui.toolbarEnabled.disabled = !initialized;
+  ui.custom.hidden = settings.mode !== 'custom';
+  ui.custom.disabled = !initialized;
+  ui.customAuto.hidden = settings.customType !== 'auto';
+  ui.customManual.hidden = settings.customType !== 'manual';
+  for (const radio of ui.custom.querySelectorAll('input[name="custom-type"]')) radio.checked = radio.value === settings.customType;
+  for (const checkbox of ui.concepts.querySelectorAll('input')) checkbox.checked = settings.customConcepts.includes(checkbox.value);
+  if (ui.customInstructions.value !== settings.customInstructions) ui.customInstructions.value = settings.customInstructions;
+  ui.customCount.textContent = settings.customInstructions.length.toLocaleString('ko-KR') + ' / 6,000';
+  ui.customSelection.textContent = settings.customConcepts.length ? '선택: ' + settings.customConcepts.map(id => CUSTOM_CONCEPTS[id].label).join(' · ') : '콘셉트를 하나 이상 선택해 주세요.';
 }
 
 function paint() {
@@ -85,9 +160,9 @@ function paint() {
   ui.source.closest('.textarea-wrap').classList.toggle('invalid', oversized);
   ui.sourceHint.textContent = oversized ? (inputLimit().toLocaleString('ko-KR') + '자 이내로 줄여 주세요') : '평소처럼 편하게 적어 주세요';
   ui.output.closest('.textarea-wrap').classList.toggle('has-result', hasOutput);
-  ui.optimize.disabled = !initialized || optimizing || pageBusy || !ui.source.value.trim() || oversized;
+  ui.optimize.disabled = !initialized || optimizing || pageBusy || !apiState?.ready || !ui.source.value.trim() || oversized || Boolean(customConfigurationError(settings));
   ui.optimize.dataset.loading = String(optimizing);
-  ui.optimizeLabel.textContent = optimizing ? 'AI가 의미를 분석하고 있어요…' : 'Optimize Prompt';
+  ui.optimizeLabel.textContent = optimizing ? 'Gemini API 최적화 중…' : 'Optimize · Gemini API';
   ui.workspace.setAttribute('aria-busy', String(!initialized || optimizing));
   ui.importPage.disabled = !initialized || pageBusy || optimizing || !Number.isInteger(tabId);
   ui.copy.disabled = !hasOutput || copying || optimizing;
@@ -97,6 +172,7 @@ function paint() {
   ui.undo.disabled = !snapshot?.canUndo || pageBusy || optimizing;
   ui.reconnectPage.disabled = !initialized || pageBusy || optimizing || !Number.isInteger(tabId);
   ui.reloadPage.disabled = !initialized || pageBusy || optimizing || !Number.isInteger(tabId);
+  paintApiState();
 }
 
 function clearResult(reason = '결과 미리보기') {
@@ -113,11 +189,11 @@ function paintResult(text, meta = {}) {
   const responseName = languageNames[meta.responseLanguage];
   const tokens = meta.usage?.totalTokens;
   ui.resultLanguage.textContent = (responseName ? '응답 언어 · ' + responseName : '최적화 완료') + (Number.isFinite(tokens) ? ' · API ' + tokens.toLocaleString() + ' 토큰' : '');
-  if (meta.intentMethod === 'llm-rewrite') ui.detail.textContent = 'AI 맞춤 재작성';
+  if (meta.intentMethod === 'llm-rewrite') ui.detail.textContent = 'Gemini API · ' + (meta.mode === 'custom' ? (meta.customType === 'manual' ? '수동 Custom' : '자동 Custom') : '맞춤 재작성');
 }
 
-// Prompts are never written to local/sync storage. The session store stays private
-// to extension contexts and disappears on browser shutdown or extension reload.
+// Request/result drafts stay in private session storage and disappear on browser
+// shutdown or extension reload. Reusable Custom instructions are separate preferences.
 function persistDraft() {
   if (!draftKey || !chrome.storage.session) return;
   const key = draftKey;
@@ -225,9 +301,9 @@ async function reloadPage() {
 }
 
 async function changeSetting(partial) {
-  const compilerKeys = new Set(['targetModel', 'responseLanguage', 'mode', 'promptLanguage', 'geminiModel']);
-  const compilerChanged = Object.keys(partial).some((key) => compilerKeys.has(key));
+  const beforeFingerprint = settingsFingerprint();
   settings = normalizeSettings({ ...settings, ...partial });
+  const compilerChanged = beforeFingerprint !== settingsFingerprint();
   paintSettings();
   if (compilerChanged) {
     revision += 1;
@@ -238,9 +314,12 @@ async function changeSetting(partial) {
   paint();
   try {
     // Use partial writes to preserve independent changes in the other contexts.
+    pendingSettingWrites += 1;
     await saveSettings(partial);
   } catch {
     feedback('설정을 저장하지 못했습니다. 현재 선택은 이번 팝업에서 계속 사용할 수 있습니다.', 'error');
+  } finally {
+    pendingSettingWrites -= 1;
   }
 }
 
@@ -249,12 +328,14 @@ async function optimize() {
   const currentRevision = revision;
   const text = ui.source.value;
   const currentSettings = { ...settings };
+  const currentApiRevision = apiCheckRevision;
   optimizing = true;
   feedback();
   clearResult('요청을 정리하고 있어요');
   paint();
   try {
     const reply = await chrome.runtime.sendMessage({ type: 'OPTIMIZE', text, settings: currentSettings });
+    if (currentApiRevision === apiCheckRevision) apiOutcome = { ok: reply?.ok === true, model: currentSettings.geminiModel };
     if (revision !== currentRevision) return;
     if (!reply?.ok || typeof reply.result?.text !== 'string' || !reply.result.text.trim()) {
       throw new Error(errorMessage(reply?.error, '프롬프트를 만들지 못했습니다. 다시 시도해 주세요.'));
@@ -264,6 +345,7 @@ async function optimize() {
     feedback('최적화했습니다. 내용을 확인한 뒤 복사하거나 입력창에 넣어 주세요.');
     ui.output.scrollIntoView({ block: 'nearest', behavior: 'instant' });
   } catch (error) {
+    if (currentApiRevision === apiCheckRevision) apiOutcome = { ok: false, model: currentSettings.geminiModel };
     logFailure('optimize', error);
     if (revision === currentRevision) {
       clearResult('다시 시도해 주세요');
@@ -386,7 +468,17 @@ ui.source.addEventListener('input', () => {
   paint();
   persistDraft();
 });
-ui.apiSettings.addEventListener('click', () => chrome.runtime.openOptionsPage().catch(() => feedback('API 설정을 열지 못했습니다.', 'error')));
+function openApiSettings() { chrome.runtime.openOptionsPage().catch(() => feedback('API 설정을 열지 못했습니다.', 'error')); }
+ui.apiSettings.addEventListener('click', openApiSettings);
+ui.apiSetup.addEventListener('click', openApiSettings);
+ui.apiRefresh.addEventListener('click', () => refreshApiStatus());
+ui.custom.addEventListener('change', event => {
+  if (event.target.matches('input[name="custom-type"]')) changeSetting({ customType: event.target.value });
+  if (event.target.matches('input[name="custom-concept"]')) {
+    changeSetting({ customConcepts: [...ui.concepts.querySelectorAll('input:checked')].map(input => input.value) });
+  }
+});
+ui.customInstructions.addEventListener('input', () => changeSetting({ customInstructions: ui.customInstructions.value }));
 ui.target.addEventListener('change', () => changeSetting({ targetModel: ui.target.value }));
 ui.language.addEventListener('change', () => changeSetting({ responseLanguage: ui.language.value }));
 ui.theme.addEventListener('change', () => changeSetting({ theme: ui.theme.value }));
@@ -431,6 +523,7 @@ async function initialize() {
   await Promise.allSettled([
     restoreDraft(),
     readPage().catch(() => { snapshot = null; showPage(); }),
+    refreshApiStatus(),
   ]);
   initialized = true;
   for (const control of [ui.target, ui.language, ui.theme, ui.modes, ui.source, ui.toolbarEnabled]) control.disabled = false;
@@ -448,8 +541,21 @@ initialize().catch(() => {
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
+  if ((area === 'local' || area === 'session') && changes['po-api-key:gemini']) {
+    apiOutcome = null;
+    refreshApiStatus();
+  }
   if (area !== 'local' || !changes.settings) return;
+  if (pendingSettingWrites) return;
+  const previous = settingsFingerprint();
   settings = normalizeSettings(changes.settings.newValue);
+  if (previous !== settingsFingerprint()) {
+    revision += 1;
+    clearResult(ui.source.value ? '설정 변경 · 다시 최적화' : '결과 미리보기');
+    persistDraft();
+  }
   paintSettings();
   paint();
 });
+chrome.permissions.onAdded?.addListener(() => refreshApiStatus());
+chrome.permissions.onRemoved?.addListener(() => refreshApiStatus());

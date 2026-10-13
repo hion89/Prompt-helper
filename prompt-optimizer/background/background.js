@@ -18,6 +18,18 @@ const storageReady = protectStorage().then(async () => {
   return true;
 }, () => false);
 let remoteBusy = false;
+async function apiStatus() {
+  const status = await keyStatus();
+  const granted = await chrome.permissions.contains({ origins: [API_PROVIDERS.gemini.origin] });
+  const settings = await getSettings();
+  status.gemini = { ...status.gemini, granted, ready: status.gemini.configured && granted, model: settings.geminiModel };
+  return status;
+}
+function publicSettings(settings) {
+  // Reusable manual instructions remain private to extension contexts.
+  const { customInstructions, ...preferences } = settings;
+  return preferences;
+}
 function isExtensionPage(sender) {
   if (sender.id !== chrome.runtime.id) return false;
   try {
@@ -53,11 +65,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({ ok: true, models });
           return;
         }
-        sendResponse({ ok: true, status: await keyStatus() });
+        sendResponse({ ok: true, status: await apiStatus() });
         return;
       }
       const stored = await getSettings();
-      if (message.type === 'GET_PUBLIC_SETTINGS') { sendResponse({ ok: true, settings: stored }); return; }
+      if (message.type === 'GET_PUBLIC_SETTINGS') {
+        sendResponse({ ok: true, settings: publicSettings(stored), api: (await apiStatus()).gemini });
+        return;
+      }
       if (message.type === 'SET_TOOLBAR_STATE') {
         if (isExtensionPage(sender)) throw new Error('페이지 미니 도구 위치는 지원 사이트에서만 변경할 수 있습니다.');
         const siteName = siteByHost[new URL(sender.url).hostname];
@@ -74,7 +89,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         if (!Object.keys(partial).length) throw new Error('변경할 미니 도구 설정이 없습니다.');
         const settings = await saveSettings(partial);
-        sendResponse({ ok: true, settings });
+        sendResponse({ ok: true, settings: publicSettings(settings) });
         return;
       }
       if (typeof message.text !== 'string' || !message.text.trim()) throw new Error('최적화할 요청을 입력해 주세요.');
@@ -106,10 +121,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 // Keep content-toolbar preferences current without exposing local secrets.
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area !== 'local' || !changes.settings) return;
-  const settings = normalizeSettings(changes.settings.newValue);
+async function broadcastState() {
+  if (!await storageReady) return;
+  const settings = publicSettings(await getSettings());
+  const api = (await apiStatus()).gemini;
   chrome.tabs.query({}).then(tabs => Promise.allSettled(
-    tabs.filter(tab => Number.isInteger(tab.id)).map(tab => chrome.tabs.sendMessage(tab.id, { type: 'PO_SETTINGS', settings }))
+    tabs.filter(tab => Number.isInteger(tab.id)).map(tab => chrome.tabs.sendMessage(tab.id, { type: 'PO_SETTINGS', settings, api }))
   )).catch(() => {});
+}
+chrome.storage.onChanged.addListener((changes, area) => {
+  if ((area === 'local' && changes.settings) || ((area === 'local' || area === 'session') && changes['po-api-key:gemini'])) {
+    broadcastState().catch(() => {});
+  }
 });
+chrome.permissions.onAdded?.addListener(() => broadcastState().catch(() => {}));
+chrome.permissions.onRemoved?.addListener(() => broadcastState().catch(() => {}));

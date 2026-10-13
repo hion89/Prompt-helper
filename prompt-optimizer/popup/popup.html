@@ -23,7 +23,12 @@
     <main id="workspace" aria-busy="true">
       <section class="engine-section" aria-label="최적화 엔진">
         <div class="section-heading"><label>최적화 엔진</label><div class="section-links"><a id="help-link" class="text-button" href="../help/help.html" target="_blank" rel="noopener">사용 설명서 ↗</a><a id="diagnostics-link" class="text-button" href="../diagnostics/diagnostics.html" target="_blank" rel="noopener">오류 진단 ↗</a><button id="api-settings" class="text-button" type="button">API 설정 ↗</button></div></div>
-        <div class="fixed-engine">Gemini API · 의미 분석·맞춤 재작성</div>
+        <div id="api-state" class="api-state" data-state="checking" role="status" aria-live="polite">
+          <div class="api-state-heading"><span class="api-state-dot" aria-hidden="true"></span><b id="api-state-title">API 등록 상태 확인 중…</b><span id="api-route" class="api-route">외부 API</span></div>
+          <p id="api-state-detail">등록한 개인 Gemini API 키로 최적화합니다.</p>
+          <div class="api-checks"><span id="api-key-state">키 확인 중</span><span id="api-permission-state">권한 확인 중</span></div>
+          <div class="api-state-actions"><button id="api-setup" class="text-button" type="button">키 등록 / API 설정 ↗</button><button id="api-refresh" class="text-button" type="button">↻ 상태 확인</button></div>
+        </div>
         <p id="engine-hint" class="engine-hint">선택한 Gemini 모델로 원문을 전송해 재작성합니다.</p>
         <label class="toolbar-setting" for="toolbar-enabled"><span><b>페이지 미니 도구</b><small>AI 입력창 옆의 Optimize·Undo 창</small></span><input id="toolbar-enabled" type="checkbox" checked disabled><span class="toolbar-switch" aria-hidden="true"></span></label>
       </section>
@@ -43,7 +48,24 @@
           <label class="mode-card"><input type="radio" name="mode" value="eco"><span class="mode-body"><span class="mode-title">ECO <span class="mode-tag">토큰 절약</span></span><span class="mode-description">핵심만 짧고 간결하게</span></span><span class="radio-indicator" aria-hidden="true"></span></label>
           <label class="mode-card"><input type="radio" name="mode" value="precision"><span class="mode-body"><span class="mode-title">Precision <span class="mode-tag">정확함</span></span><span class="mode-description">조건과 기준을 구체적으로</span></span><span class="radio-indicator" aria-hidden="true"></span></label>
           <label class="mode-card"><input type="radio" name="mode" value="natural"><span class="mode-body"><span class="mode-title">Natural</span><span class="mode-description">자연스러운 문체</span></span><span class="radio-indicator" aria-hidden="true"></span></label>
+          <label class="mode-card custom-mode-card"><input type="radio" name="mode" value="custom"><span class="mode-body"><span class="mode-title">Custom <span class="mode-tag">나만의 방식</span></span><span class="mode-description">직접 지침을 쓰거나 콘셉트를 조합</span></span><span class="radio-indicator" aria-hidden="true"></span></label>
         </div>
+      </fieldset>
+
+      <fieldset id="custom-options" class="custom-panel" hidden disabled>
+        <legend>Custom 설정 <span>Gemini API에 적용</span></legend>
+        <div class="custom-types"><label><input type="radio" name="custom-type" value="auto" checked>자동 · 콘셉트 조합</label><label><input type="radio" name="custom-type" value="manual">수동 · 직접 지침</label></div>
+        <div id="custom-auto">
+          <p class="custom-note">원하는 요소를 여러 개 골라 주세요. 원문의 조건을 유지하며 함께 반영합니다.</p>
+          <div id="custom-concepts" class="concept-grid"></div>
+          <p id="custom-selection" class="custom-note"></p>
+        </div>
+        <div id="custom-manual" hidden>
+          <label for="custom-instructions" class="custom-label">Gemini에 보낼 프롬프트 최적화 지침</label>
+          <div class="textarea-wrap"><textarea id="custom-instructions" rows="4" maxlength="6000" spellcheck="false" aria-describedby="custom-instructions-note custom-count" placeholder="예: 요청의 목적과 필수 조건을 먼저 파악하고, 실무자가 바로 사용할 수 있는 짧은 프롬프트로 재작성해 줘. 정중하고 친근한 말투를 사용하고, 최종 프롬프트만 반환해 줘."></textarea><div class="editor-bottom"><span>직접 작성한 재작성 방식</span><span id="custom-count">0 / 6,000</span></div></div>
+          <p id="custom-instructions-note" class="custom-note">이 칸은 재작성 방법, ‘나의 요청’은 재작성할 원문입니다. 지침과 원문을 함께 Gemini API에 보냅니다.</p>
+        </div>
+        <p class="custom-note custom-storage-note">Custom 설정은 이 브라우저에 자동 저장됩니다. 다른 모드에서도 유지되며 Custom에서만 적용됩니다.</p>
       </fieldset>
 
       <section class="editor-section" aria-labelledby="source-label">
@@ -51,7 +73,8 @@
         <div class="textarea-wrap"><textarea id="source" rows="4" spellcheck="false" placeholder="예: 강화학습 로봇이 앞으로 가지 않고 제자리에서 버티는데, 왜 그런지 분석해 줘." aria-describedby="source-hint source-count" disabled></textarea><div class="editor-bottom"><span id="source-hint">평소처럼 편하게 적어 주세요</span><span id="source-count">0 / 12,000</span></div></div>
       </section>
 
-      <button id="optimize" class="primary-button" type="button" disabled><svg class="optimize-icon" aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="m10 2 2.2 5.8L18 10l-5.8 2.2L10 18l-2.2-5.8L2 10l5.8-2.2L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg><span id="optimize-label">Optimize Prompt</span><kbd>Ctrl ↵</kbd></button>
+      <p id="request-route" class="request-route">API 상태를 확인하고 있습니다.</p>
+      <button id="optimize" class="primary-button" type="button" disabled><svg class="optimize-icon" aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="m10 2 2.2 5.8L18 10l-5.8 2.2L10 18l-2.2-5.8L2 10l5.8-2.2L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg><span id="optimize-label">Optimize · Gemini API</span><kbd>Ctrl ↵</kbd></button>
 
       <section class="editor-section output-section" aria-labelledby="output-label">
         <div class="section-heading"><label id="output-label" for="output">최적화된 프롬프트</label><span id="result-detail" class="result-detail">결과 미리보기</span></div>

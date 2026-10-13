@@ -2,13 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 test('background protects credentials and always uses Gemini despite legacy provider input', async () => {
   let listener;
+  let permissionAllowed = true;
   const local = { settings: { optimizerProvider: 'local', obsoletePlaceholder: true }, 'po-api-key:openai': 'legacy-local-key' };
   const session = { 'po-api-key:openai': 'legacy-session-key' };
   const makeStore = entries => ({ async setAccessLevel() {}, async get(key) { return { [key]: entries[key] }; }, async set(values) { Object.assign(entries, values); }, async remove(key) { delete entries[key]; } });
   globalThis.chrome = {
     runtime: { id: 'test-extension', onMessage: { addListener(fn) { listener = fn; } } },
     storage: { local: makeStore(local), session: makeStore(session), onChanged: { addListener() {} } },
-    permissions: { async contains() { return true; } },
+    permissions: { async contains() { return permissionAllowed; } },
     tabs: { async query() { return []; }, async sendMessage() {} },
   };
   await import('../background/background.js');
@@ -17,9 +18,17 @@ test('background protects credentials and always uses Gemini despite legacy prov
   const options = { id: 'test-extension', url: 'chrome-extension://test-extension/options/options.html' };
   assert.equal((await send({ type: 'API_SAVE_KEY', provider: 'gemini', key: 'private-key-test' }, site)).ok, false);
   assert.equal((await send({ type: 'API_STATUS' }, site)).ok, false);
+  assert.equal((await send({ type: 'API_STATUS' }, options)).status.gemini.ready, false);
   const save = await send({ type: 'API_SAVE_KEY', provider: 'gemini', key: 'private-key-test' }, options);
   assert.equal(save.ok, true);
   assert(!JSON.stringify(save).includes('private-key-test'));
+  assert.equal(save.status.gemini.ready, true);
+  permissionAllowed = false;
+  const noPermission = (await send({ type: 'API_STATUS' }, options)).status.gemini;
+  assert.equal(noPermission.configured, true);
+  assert.equal(noPermission.granted, false);
+  assert.equal(noPermission.ready, false);
+  permissionAllowed = true;
   const oldFetch = globalThis.fetch;
   let lookupCalls = 0;
   globalThis.fetch = async (url, options) => {
@@ -64,6 +73,22 @@ test('background protects credentials and always uses Gemini despite legacy prov
   assert.equal(result.result.meta.provider, 'gemini');
   assert.equal(result.result.ir.targetModel, 'claude');
   assert.equal(lookupCalls, 2);
+  local.settings = { ...local.settings, mode: 'custom', customType: 'manual', customInstructions: 'PRIVATE_OWNER_REWRITE_INSTRUCTIONS' };
+  const customPublic = await send({ type: 'GET_PUBLIC_SETTINGS' }, site);
+  assert.equal(customPublic.api.ready, true);
+  assert.equal(customPublic.api.configured, true);
+  assert.equal('customInstructions' in customPublic.settings, false);
+  assert(!JSON.stringify(customPublic).includes('PRIVATE_OWNER_REWRITE_INSTRUCTIONS'));
+  assert.equal('customInstructions' in (await send({ type: 'SET_TOOLBAR_STATE', enabled: true }, site)).settings, false);
+  globalThis.fetch = async (url, options) => {
+    const input = JSON.parse(JSON.parse(options.body).contents[0].parts[0].text);
+    assert.equal(input.customOptimization.type, 'manual');
+    assert.equal(input.customOptimization.instructions, 'PRIVATE_OWNER_REWRITE_INSTRUCTIONS');
+    return { ok: true, json: async () => ({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: 'Custom result' }] } }] }) };
+  };
+  const customResult = await send({ type: 'OPTIMIZE', text: 'Rewrite this', settings: { customType: 'auto', customInstructions: 'UNTRUSTED_OVERRIDE', targetModel: 'claude' } }, site);
+  assert.equal(customResult.ok, true);
+  assert.equal(customResult.result.meta.customType, 'manual');
   globalThis.fetch = oldFetch;
   const blocked = await send({ type: 'OPTIMIZE', text: 'hello' }, { id: 'other', url: 'https://chatgpt.com/' });
   assert.equal(blocked.ok, false);

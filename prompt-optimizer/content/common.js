@@ -5,7 +5,7 @@
   if (!site || globalThis.__PROMPT_OPTIMIZER_STARTED__) return;
   globalThis.__PROMPT_OPTIMIZER_STARTED__ = true;
 
-  const MODE_NAMES = { default: 'Default', eco: 'ECO · 토큰 절약', precision: 'Precision · 정확함', natural: 'Natural · 자연스러운 문체' };
+  const MODE_NAMES = { default: 'Default', eco: 'ECO · 토큰 절약', precision: 'Precision · 정확함', natural: 'Natural · 자연스러운 문체', custom: 'Custom' };
   const MAX_SOURCE_LENGTH = 12000;
   const MAX_LENGTH = 100000;
   const host = document.createElement('div');
@@ -30,6 +30,10 @@
     .hide { color:var(--muted);padding:6px 5px;font-size:15px;line-height:1; }
     .optimize { font-weight:700;color:var(--accent); }
     .mode { border-left:1px solid var(--line);padding-left:8px;color:var(--muted);font-size:10px;white-space:nowrap;flex:0 0 auto; }
+    .mode[data-ready="true"] { color:var(--accent); }
+    .mode[data-ready="false"] { color:#be3939; }
+    .dark .mode[data-ready="false"] { color:#ffaaaa; }
+    .mode::before { content:'●';margin-right:4px;font-size:8px; }
     @media (max-width:420px) { .bar { flex-wrap:wrap; } .mode { white-space:normal; } }
     .status { display:none;background:var(--bg);border:1px solid var(--line);border-radius:9px;margin-top:5px;padding:8px 10px;max-width:320px;white-space:normal;pointer-events:auto; }
     .status.visible { display:block; }
@@ -78,6 +82,7 @@
   shadow.append(style, panel);
 
   let settings = { mode: 'default', theme: 'system', toolbarEnabled: false, toolbarPositions: {} };
+  let apiState = null;
   let composer = null;
   let originals = new WeakMap();
   const tokens = new WeakMap();
@@ -161,13 +166,18 @@
     if (message && !error) statusTimer = setTimeout(() => showStatus(''), 6500);
   }
 
-  function applySettings(value) {
+  function applySettings(value, api) {
+    if (api !== undefined) apiState = api;
     settings = { ...settings, ...(value && typeof value === 'object' ? value : {}) };
     const mode = MODE_NAMES[settings.mode] ? settings.mode : 'default';
-    modeBadge.textContent = 'Gemini API · ' + MODE_NAMES[mode];
-    modeBadge.title = `${site.name} · ${MODE_NAMES[mode]} (모드는 확장 프로그램 팝업에서 변경)`;
+    const name = mode === 'custom' ? 'Custom · ' + (settings.customType === 'manual' ? '수동' : '자동') : MODE_NAMES[mode];
+    const apiLabel = !apiState ? '상태 확인 중' : !apiState.configured ? '키 미등록' : !apiState.granted ? '권한 필요' : '키 등록됨';
+    modeBadge.textContent = 'Gemini API · ' + apiLabel + ' · ' + name;
+    modeBadge.dataset.ready = String(apiState?.ready === true);
+    modeBadge.title = `Gemini API ${apiLabel} · ${site.name} · ${name}. 키와 권한 준비 상태이며 실제 인증과 할당량은 요청 시 확인합니다. 설정은 확장 프로그램 팝업에서 변경합니다.`;
     panel.classList.toggle('dark', settings.theme === 'dark' || ((settings.theme === 'system' || settings.theme === 'auto') && systemTheme.matches));
     syncToolbarRuntime();
+    updateButtons();
   }
 
   function syncToolbarRuntime() {
@@ -190,7 +200,8 @@
   }
 
   function updateButtons() {
-    optimizeButton.disabled = Boolean(operation);
+    optimizeButton.disabled = Boolean(operation) || apiState?.ready !== true;
+    optimizeButton.title = apiState?.ready ? '등록한 개인 키로 Gemini API에 원문과 설정을 보내 최적화합니다.' : '확장 프로그램 팝업에서 Gemini API 키와 연결 권한을 확인해 주세요.';
     optimizeButton.textContent = operation ? '최적화 중…' : '✦ Optimize';
     undoButton.disabled = Boolean(operation) || !canUndo(composer);
     undoButton.title = originals.has(composer) && !canUndo(composer)
@@ -397,6 +408,7 @@
 
   async function optimize() {
     if (operation) return;
+    if (!apiState?.ready) return showStatus('Gemini API 키와 연결 권한을 확장 프로그램 팝업에서 확인해 주세요.', true);
     const element = findComposer();
     if (!element) return showStatus('입력창을 찾지 못했습니다. 확장 프로그램 팝업을 이용해 주세요.', true);
     const before = readText(element);
@@ -482,7 +494,7 @@
 
   chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if (sender.id && sender.id !== chrome.runtime.id) return false;
-    if (message?.type === 'PO_SETTINGS') { applySettings(message.settings); respond({ ok: true }); return false; }
+    if (message?.type === 'PO_SETTINGS') { applySettings(message.settings, message.api); respond({ ok: true }); return false; }
     if (!message || !['PO_GET_COMPOSER', 'PO_RESCAN', 'PO_REPLACE', 'PO_UNDO'].includes(message.type)) return false;
     try {
       if (message.type === 'PO_RESCAN') composer = null;
@@ -503,7 +515,7 @@
     if (area === 'local' && changes.settings) applySettings(changes.settings.newValue || { mode: 'default', theme: 'system' });
   });
   chrome.runtime.sendMessage({ type: 'GET_PUBLIC_SETTINGS' }).then(reply => {
-    if (reply?.ok && reply.settings && typeof reply.settings === 'object') applySettings(reply.settings);
+    if (reply?.ok && reply.settings && typeof reply.settings === 'object') applySettings(reply.settings, reply.api);
     else applySettings({ ...settings, toolbarEnabled: true });
   }).catch(() => applySettings({ ...settings, toolbarEnabled: true }));
   applySettings(settings);

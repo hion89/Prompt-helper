@@ -99,10 +99,10 @@ try {
   }
   const compiled = await new LocalPromptOptimizer().optimize('이 코드 왜 안되는지 분석해줘', { mode: 'precision', responseLanguage: 'ko', targetModel: 'chatgpt' });
   const stub = [
-    "window.__listeners=[]; window.__settings={targetModel:'chatgpt',responseLanguage:'ko',mode:'precision',theme:'light'};",
+    "window.__listeners=[];window.__storageListeners=[];window.__api={configured:true,granted:true,ready:true,persistent:false}; window.__settings={targetModel:'chatgpt',responseLanguage:'ko',mode:'precision',theme:'light'};",
     'window.__result=' + JSON.stringify(compiled) + '; window.__delay=0; window.__submitted=0; window.__keydown=0; window.__runtimeMessages=[];',
-    "window.chrome={runtime:{id:'fixture-extension',getURL:p=>'/'+p,getManifest:()=>({name:'Prompt Optimizer',version:'1.9.0'}),onMessage:{addListener:fn=>__listeners.push(fn)},sendMessage:async m=>{__runtimeMessages.push(m);await new Promise(r=>setTimeout(r,__delay));return m.type==='SET_TOOLBAR_STATE'?{ok:true}:m.type==='API_STATUS'?{ok:true,status:{gemini:{configured:true}}}:{ok:true,result:__result}}},",
-    "storage:{local:{get:async()=>({settings:__settings}),set:async v=>Object.assign(__settings,v.settings)},session:{get:async()=>({}),set:async()=>{},remove:async()=>{}},onChanged:{addListener:()=>{}}},",
+    "window.chrome={runtime:{id:'fixture-extension',getURL:p=>'/'+p,getManifest:()=>({name:'Prompt Optimizer',version:'1.10.0'}),onMessage:{addListener:fn=>__listeners.push(fn)},sendMessage:async m=>{__runtimeMessages.push(m);await new Promise(r=>setTimeout(r,__delay));return m.type==='SET_TOOLBAR_STATE'?{ok:true}:m.type==='GET_PUBLIC_SETTINGS'?{ok:true,settings:{...__settings,toolbarEnabled:true},api:__api}:m.type==='API_STATUS'?{ok:true,status:{gemini:__api}}:{ok:true,result:__result}}},",
+    "storage:{local:{get:async()=>({settings:__settings}),set:async v=>Object.assign(__settings,v.settings)},session:{get:async()=>({}),set:async()=>{},remove:async()=>{}},onChanged:{addListener:fn=>__storageListeners.push(fn)}},permissions:{onAdded:{addListener:()=>{}},onRemoved:{addListener:()=>{}}},",
     "tabs:{query:async()=>[{id:1}],sendMessage:async()=>({ok:false,error:'연결된 AI 입력창이 없습니다.'}),reload:async id=>{window.__reloads=(window.__reloads||0)+1;window.__reloadedTab=id}}};",
     "window.__message=m=>new Promise(resolve=>{let waiting=false;for(const fn of __listeners){if(fn(m,{id:chrome.runtime.id},resolve)===true)waiting=true;}if(!waiting)setTimeout(()=>resolve(undefined),100);});",
     "document.addEventListener('submit',e=>{e.preventDefault();__submitted++});document.addEventListener('keydown',e=>{if(e.key==='Enter')__keydown++});",
@@ -141,6 +141,12 @@ try {
       await p.evaluate('__message({type:"PO_SETTINGS",settings:{toolbarEnabled:true,toolbarPositions:{chatgpt:{x:.2,y:.8}}}})');
       await until(() => p.evaluate('getComputedStyle(document.querySelector("#prompt-optimizer-toolbar")).display==="block"'), 'toolbar re-enable');
       pass('Toolbar can be dragged, hidden, and re-enabled');
+      await p.evaluate('__message({type:"PO_SETTINGS",settings:{mode:"custom",customType:"manual"},api:{configured:false,granted:true,ready:false}})');
+      assert.equal(await p.evaluate('document.querySelector("#prompt-optimizer-toolbar").shadowRoot.querySelector(".optimize").disabled'), true);
+      assert.equal(await p.evaluate('document.querySelector("#prompt-optimizer-toolbar").shadowRoot.querySelector(".mode").textContent.includes("키 미등록")'), true);
+      await p.evaluate('__message({type:"PO_SETTINGS",settings:{mode:"precision"},api:__api})');
+      assert.equal(await p.evaluate('document.querySelector("#prompt-optimizer-toolbar").shadowRoot.querySelector(".optimize").disabled'), false);
+      pass('Toolbar API status blocks optimization until key and permission are ready');
     }
     await clickOptimize(p);
     try {
@@ -187,6 +193,12 @@ try {
   pass('Popup loads under extension CSP; no horizontal overflow');
   const popupChecks = await runPopupChecks(popup, compiled);
   count += popupChecks.passed;
+  for (const type of ['auto', 'manual']) {
+    await popup.evaluate(`document.querySelector('input[name=mode][value=custom]').click();document.querySelector('input[name=custom-type][value=${type}]').click();document.querySelector('#mode-options').scrollIntoView({block:'start'});`);
+    assert.equal(await popup.evaluate('document.documentElement.scrollWidth<=innerWidth'), true, 'Custom has no horizontal overflow');
+    const customScreenshot = await popup.send('Page.captureScreenshot', { format: 'png' });
+    await writeFile(path.join(artifacts, 'popup-custom-' + type + '.png'), Buffer.from(customScreenshot.data, 'base64'));
+  }
   const help = await page(base + '/help/help.html');
   await help.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 760, deviceScaleFactor: 1, mobile: true });
   assert.equal(await help.evaluate('document.querySelectorAll("main section").length>=6'), true);
@@ -196,7 +208,7 @@ try {
   pass('Beginner guide is always reachable and includes responsive troubleshooting');
   const diagnostics = await page(base + '/diagnostics/diagnostics.html', stub);
   await diagnostics.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 760, deviceScaleFactor: 1, mobile: true });
-  await until(() => diagnostics.evaluate('document.querySelector("#version")?.textContent.includes("1.9.0")'), 'diagnostics load');
+  await until(() => diagnostics.evaluate('document.querySelector("#version")?.textContent.includes("1.10.0")'), 'diagnostics load');
   assert.equal(await diagnostics.evaluate('document.querySelectorAll("#copy-report,#download-report,#report-file").length'), 3);
   assert.equal(await diagnostics.evaluate('document.documentElement.scrollWidth<=innerWidth'), true, 'Diagnostics has no horizontal overflow');
   assert.equal(await popup.evaluate('document.querySelector("#diagnostics-link")?.target'), '_blank');

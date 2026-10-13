@@ -15,6 +15,16 @@ test('legacy provider selections are removed because Gemini is fixed', () => {
   assert.equal('optimizerProvider' in normalizeSettings({ optimizerProvider: 'local' }), false);
   assert.equal('optimizerProvider' in normalizeSettings({ optimizerProvider: 'openai' }), false);
 });
+test('Custom preferences migrate, filter concepts, and bound reusable instructions', () => {
+  const custom = normalizeSettings({ mode: 'custom', customType: 'manual', customInstructions: 'a'.repeat(6001), customConcepts: ['friendly', 'accuracy', 'friendly', 'unknown'] });
+  assert.equal(custom.mode, 'custom');
+  assert.equal(custom.customType, 'manual');
+  assert.equal(custom.customInstructions.length, 6000);
+  assert.deepEqual(custom.customConcepts, ['accuracy', 'friendly']);
+  assert.equal(normalizeSettings({ customType: 'invalid', customInstructions: 123 }).customType, 'auto');
+  assert.deepEqual(normalizeSettings({ customConcepts: [] }).customConcepts, []);
+  assert.deepEqual(normalizeSettings({ mode: 'custom' }).customConcepts, ['accuracy', 'clarity']);
+});
 test('toolbar visibility and per-site positions are normalized', () => {
   const configured = normalizeSettings({ toolbarEnabled: false, toolbarPositions: { chatgpt: { x: 1.4, y: -1 }, gemini: { x: 0.25, y: 0.75 }, unknown: { x: 0.5, y: 0.5 } } });
   assert.equal(configured.toolbarEnabled, false);

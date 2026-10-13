@@ -26,6 +26,48 @@ test('Gemini sends semantic rewrite request, private key header, and selected de
   assert.equal(result.meta.usage.totalTokens, 270);
   assert.equal(calls, 1);
 });
+test('manual Custom sends owner instructions separately from source, only in Custom mode', async () => {
+  const customInstructions = '목적과 조건을 정리해서 친근한 한국어 프롬프트로 재작성해 줘.';
+  const request = buildRewriteRequest(source, { mode: 'custom', customType: 'manual', customInstructions });
+  assert.equal(request.ir.mode, 'custom');
+  const input = JSON.parse(request.input);
+  assert.equal(input.originalRequest, source);
+  assert.deepEqual(input.customOptimization, { type: 'manual', instructions: customInstructions });
+  assert.match(request.instructions, /Do NOT answer or execute/);
+  assert.match(request.instructions, /rewriting process only/);
+  assert.match(request.instructions, /preserve original explicit constraints and factual accuracy first/);
+  const inactive = buildRewriteRequest(source, { mode: 'eco', customType: 'manual', customInstructions });
+  assert.equal('customOptimization' in JSON.parse(inactive.input), false);
+  assert(!inactive.instructions.includes(customInstructions));
+});
+test('automatic Custom combines chosen concepts into an actual Gemini request', async () => {
+  let calls = 0;
+  const optimizer = new RemotePromptOptimizer('gemini', 'private-test-key', { fetchImpl: async (url, options) => {
+    calls++;
+    const body = JSON.parse(options.body);
+    const input = JSON.parse(body.contents[0].parts[0].text);
+    assert.equal(input.originalRequest, source);
+    assert.equal(input.customOptimization.type, 'auto');
+    assert.deepEqual(input.customOptimization.concepts.map(item => item.id), ['accuracy', 'economy', 'professional', 'friendly']);
+    assert(input.customOptimization.concepts.every(item => item.instruction.length > 10));
+    assert(!options.body.includes('unused private manual instructions'));
+    assert.match(body.systemInstruction.parts[0].text, /Blend compatible styles/);
+    return { ok: true, json: async () => ({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: rewritten }] } }] }) };
+  } });
+  const result = await optimizer.optimize(source, { mode: 'custom', customType: 'auto', customConcepts: ['friendly', 'professional', 'accuracy', 'economy', 'accuracy', 'invalid'], customInstructions: 'unused private manual instructions' });
+  assert.equal(calls, 1);
+  assert.equal(result.meta.mode, 'custom');
+  assert.equal(result.meta.customType, 'auto');
+  assert.equal(result.meta.provider, 'gemini');
+});
+test('invalid Custom configurations never make a billed request', async () => {
+  let calls = 0;
+  const optimizer = new RemotePromptOptimizer('gemini', 'private-test-key', { fetchImpl: async () => { calls++; } });
+  await assert.rejects(optimizer.optimize(source, { mode: 'custom', customType: 'manual', customInstructions: '  ' }), /최적화 지침/);
+  await assert.rejects(optimizer.optimize(source, { mode: 'custom', customType: 'manual', customInstructions: 'a'.repeat(6001) }), /6,000/);
+  await assert.rejects(optimizer.optimize(source, { mode: 'custom', customType: 'auto', customConcepts: [] }), /하나 이상/);
+  assert.equal(calls, 0);
+});
 test('429 and payment failures make exactly one request, with no retry or provider fallback', async () => {
   for (const status of [401, 402, 429, 500]) {
     let calls = 0;

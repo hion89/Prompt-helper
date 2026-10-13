@@ -34,7 +34,7 @@ export async function runPopupChecks(cdp, compiled) {
     chrome.storage.local.set=async v=>{__writes.push(v);Object.assign(__settings,v.settings)};
     chrome.storage.session.set=async v=>{__sessionWrites.push(v)};
     chrome.storage.session.remove=async k=>{__removed.push(k)};
-    chrome.runtime.sendMessage=async m=>{__compilerCalls++;await new Promise(r=>setTimeout(r,__delay));return {ok:true,result:__result}};`);
+    chrome.runtime.sendMessage=async m=>{if(m.type==='API_STATUS')return {ok:true,status:{gemini:__api}};__compilerCalls++;window.__lastRequest=m;await new Promise(r=>setTimeout(r,__delay));return {ok:true,result:__result}};`);
   for (const [selector, value] of [['#target-model', 'claude'], ['#response-language', 'en'], ['#theme', 'dark']]) {
     await read(`document.querySelector(${JSON.stringify(selector)}).value=${JSON.stringify(value)};document.querySelector(${JSON.stringify(selector)}).dispatchEvent(new Event('change',{bubbles:true}));`);
   }
@@ -116,6 +116,55 @@ export async function runPopupChecks(cdp, compiled) {
   await waitFor('__removed.length>0');
   assert.equal(await read('document.querySelector("#optimize").disabled'), true);
   pass('Reset clears the popup and its session draft');
+
+  await setInput('회의 안내 이메일을 정중하게 작성해 줘');
+  const beforeCustom = await read('__compilerCalls');
+  await read(`__api={configured:false,granted:true,ready:false};document.querySelector('#api-refresh').click();`);
+  await waitFor('document.querySelector("#api-state").dataset.state==="missing"');
+  assert.equal(await read('document.querySelector("#optimize").disabled'), true);
+  await read('document.querySelector("#optimize").click();');
+  assert.equal(await read('__compilerCalls'), beforeCustom);
+  await read(`__api={configured:true,granted:false,ready:false};document.querySelector('#api-refresh').click();`);
+  await waitFor('document.querySelector("#api-state").dataset.state==="permission"');
+  assert.equal(await read('document.querySelector("#optimize").disabled'), true);
+  await read(`__api={configured:true,granted:true,ready:true,persistent:true};document.querySelector('#api-refresh').click();`);
+  await waitFor('document.querySelector("#api-state").dataset.state==="ready"');
+  assert.equal(await read('document.querySelector("#optimize").disabled'), false);
+  assert.equal(await read('document.querySelector("#api-key-state").textContent.includes("브라우저 저장")'), true);
+  assert.equal(await read('__compilerCalls'), beforeCustom, 'Status checks do not generate prompts');
+  pass('API status distinguishes missing key, missing permission and readiness without generation');
+
+  await read(`document.querySelector('input[name=mode][value=custom]').click();`);
+  await waitFor('!document.querySelector("#custom-options").hidden && __settings.mode==="custom"');
+  assert.equal(await read('document.querySelectorAll("input[name=custom-concept]").length'), 10);
+  await read(`for(const input of document.querySelectorAll('input[name=custom-concept]:checked'))input.click();`);
+  await waitFor('__settings.customConcepts.length===0');
+  assert.equal(await read('document.querySelector("#optimize").disabled'), true);
+  await read(`for(const value of ['accuracy','economy','professional','friendly'])document.querySelector('input[name=custom-concept][value='+value+']').click();`);
+  await waitFor('__settings.customConcepts.length===4 && !document.querySelector("#optimize").disabled');
+  await read(`document.querySelector('#optimize').click();`);
+  await waitFor('document.querySelector("#output").value.length>0');
+  assert.deepEqual(await read('__lastRequest.settings.customConcepts'), ['accuracy', 'economy', 'professional', 'friendly']);
+  assert.equal(await read('__lastRequest.settings.mode'), 'custom');
+  assert.equal(await read('document.querySelector("#api-state").dataset.state'), 'success');
+  pass('Automatic Custom persists multiple choices and passes them to optimization');
+
+  await read(`document.querySelector('input[name=custom-type][value=manual]').click();`);
+  await waitFor('!document.querySelector("#custom-manual").hidden && __settings.customType==="manual"');
+  assert.equal(await read('document.querySelector("#output").value'), '');
+  assert.equal(await read('document.querySelector("#optimize").disabled'), true);
+  await read(`document.querySelector('#custom-instructions').value='条件を保って、親しみやすく短いプロンプトに書き直して。';document.querySelector('#custom-instructions').dispatchEvent(new Event('input',{bubbles:true}));`);
+  await waitFor('__settings.customInstructions.length>0 && !document.querySelector("#optimize").disabled');
+  await read(`document.querySelector('#optimize').click();`);
+  await waitFor('document.querySelector("#output").value.length>0');
+  assert.equal(await read('__lastRequest.settings.customType'), 'manual');
+  assert.equal(await read('__lastRequest.settings.customInstructions'), '条件を保って、親しみやすく短いプロンプトに書き直して。');
+  assert.equal(await read('__lastRequest.text'), '회의 안내 이메일을 정중하게 작성해 줘');
+  await read(`document.querySelector('input[name=mode][value=eco]').click();`);
+  await waitFor('document.querySelector("#custom-options").hidden && __settings.mode==="eco"');
+  assert.equal(await read('__settings.customInstructions.length>0'), true);
+  assert.equal(await read('document.querySelector("#output").value'), '');
+  pass('Manual Custom stores reusable instructions separately from source and clears stale results');
 
   // Restore a useful, neutral state for the caller screenshot.
   await read('document.querySelector("#theme").value="light";document.querySelector("#theme").dispatchEvent(new Event("change",{bubbles:true}));');

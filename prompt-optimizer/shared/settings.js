@@ -1,17 +1,23 @@
+import { MAX_CUSTOM_INSTRUCTIONS, normalizeCustomConcepts } from './custom.js';
+
 export const DEFAULT_SETTINGS = Object.freeze({
   targetModel: 'chatgpt', responseLanguage: 'auto', mode: 'default', theme: 'system', promptLanguage: 'auto', geminiModel: 'gemini-3.5-flash-lite', geminiModelSelected: false,
   toolbarEnabled: true, toolbarPositions: {},
+  customType: 'auto', customInstructions: '', customConcepts: Object.freeze(['accuracy', 'clarity']),
 });
 const choices = {
   targetModel: ['chatgpt', 'claude', 'gemini', 'perplexity'],
   responseLanguage: ['auto', 'ko', 'en', 'ja', 'zh'],
-  mode: ['default', 'eco', 'precision', 'natural'],
+  mode: ['default', 'eco', 'precision', 'natural', 'custom'],
+  customType: ['auto', 'manual'],
   theme: ['system', 'light', 'dark'],
   promptLanguage: ['auto', 'ko', 'en'],
 };
 export function normalizeSettings(value = {}) {
   const result = { ...DEFAULT_SETTINGS };
   if (!value || typeof value !== 'object' || Array.isArray(value)) return result;
+  if (typeof value.customInstructions === 'string') result.customInstructions = value.customInstructions.slice(0, MAX_CUSTOM_INSTRUCTIONS);
+  if (Array.isArray(value.customConcepts)) result.customConcepts = normalizeCustomConcepts(value.customConcepts);
   result.geminiModelSelected = value.geminiModelSelected === true;
   if (typeof value.geminiModel === 'string' && /^gemini-[a-z0-9.-]{1,80}$/.test(value.geminiModel)
       && (value.geminiModel !== 'gemini-2.5-flash-lite' || result.geminiModelSelected)) result.geminiModel = value.geminiModel;
@@ -35,7 +41,7 @@ export async function getSettings() {
   const { settings } = await chrome.storage.local.get('settings');
   return normalizeSettings(settings);
 }
-// Serialize rapid preference writes within this context. Never store prompts here.
+// Serialize preferences, including reusable Custom instructions. Request drafts stay in session storage.
 let pendingWrite = Promise.resolve();
 export function saveSettings(partial) {
   const next = pendingWrite.catch(() => {}).then(async () => {

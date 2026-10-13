@@ -139,3 +139,37 @@ footer svg { width: 12px; height: 12px; }
 .toolbar-setting{position:relative;display:grid;grid-template-columns:1fr 31px;align-items:center;gap:10px;margin:10px 0 0;padding-top:10px;border-top:1px solid var(--line);cursor:pointer}.toolbar-setting>span:first-child{display:flex;flex-direction:column;gap:2px}.toolbar-setting b{font-size:10px}.toolbar-setting small{color:var(--muted);font-size:9px}.toolbar-setting input{position:absolute;opacity:0;width:1px;height:1px}.toolbar-switch{position:relative;width:29px;height:17px;border-radius:10px;background:var(--line);transition:background .12s}.toolbar-switch::after{content:"";position:absolute;width:13px;height:13px;left:2px;top:2px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px #0003;transition:transform .12s}.toolbar-setting input:checked+.toolbar-switch{background:var(--accent)}.toolbar-setting input:checked+.toolbar-switch::after{transform:translateX(12px)}.toolbar-setting:has(input:focus-visible){outline:2px solid var(--focus);outline-offset:3px;border-radius:5px}.toolbar-setting:has(input:disabled){opacity:.5;cursor:default}
 
 .brand-copy h1{flex-wrap:wrap;row-gap:3px}.theme-select{flex-shrink:0}footer{flex-wrap:wrap;row-gap:3px}
+
+.api-state { padding:11px 12px; border:1px solid var(--line); border-radius:9px; background:var(--surface); }
+.api-state[data-state="ready"], .api-state[data-state="sending"], .api-state[data-state="success"] { border-color:var(--accent-line); background:var(--accent-soft); }
+.api-state[data-state="missing"], .api-state[data-state="permission"], .api-state[data-state="error"] { border-color:var(--error); background:var(--error-bg); }
+.api-state-heading { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.api-state-heading b { font-size:12px; }
+.api-state-dot { width:8px; height:8px; border-radius:50%; background:var(--muted); flex-shrink:0; }
+.api-state[data-state="ready"] .api-state-dot, .api-state[data-state="sending"] .api-state-dot, .api-state[data-state="success"] .api-state-dot { background:var(--accent); }
+.api-state[data-state="missing"] .api-state-dot, .api-state[data-state="permission"] .api-state-dot, .api-state[data-state="error"] .api-state-dot { background:var(--error); }
+.api-route { margin-left:auto; font-size:9px; padding:3px 5px; border:1px solid var(--line); border-radius:4px; white-space:nowrap; }
+.api-state p { margin:7px 0; font-size:10px; line-height:1.6; overflow-wrap:anywhere; }
+.api-checks { display:flex; flex-wrap:wrap; gap:6px; color:var(--muted); font-size:10px; }
+.api-checks span { padding:3px 6px; background:var(--surface); border-radius:4px; }
+.api-state-actions { display:flex; justify-content:space-between; gap:10px; margin-top:6px; }
+.custom-mode-card { grid-column:1 / -1; }
+.custom-panel { min-width:0; margin:0 0 16px; padding:12px; border:1px solid var(--accent-line); border-radius:10px; background:var(--surface); }
+.custom-panel legend { width:auto; padding:0 5px; margin:0; }
+.custom-panel legend span { float:none; margin-left:8px; }
+.custom-types { display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 10px; }
+.custom-types label { flex:1; display:flex; align-items:center; gap:5px; padding:7px; font-size:10px; border:1px solid var(--line); border-radius:6px; cursor:pointer; }
+input { accent-color:var(--accent); }
+.custom-types label:has(input:checked) { border-color:var(--accent); background:var(--accent-soft); }
+.custom-note { margin:8px 0; font-size:10px; line-height:1.6; color:var(--muted); overflow-wrap:anywhere; }
+.custom-storage-note { margin-bottom:0; padding-top:8px; border-top:1px solid var(--line); }
+.concept-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.concept-option { display:flex; align-items:flex-start; gap:6px; padding:8px; border:1px solid var(--line); border-radius:7px; cursor:pointer; }
+.concept-option:has(input:checked) { background:var(--accent-soft); border-color:var(--accent-line); }
+.concept-option input { margin:2px 0 0; flex-shrink:0; }
+.concept-option b, .concept-option small { display:block; }
+.concept-option b { font-size:11px; }
+.concept-option small { margin-top:3px; font-size:9px; color:var(--muted); line-height:1.4; }
+.custom-label { display:block; margin-bottom:7px; font-size:11px; font-weight:650; }
+.request-route { margin:10px 0 0; color:var(--accent); font-size:10px; line-height:1.5; overflow-wrap:anywhere; }
+.request-route[data-state="blocked"] { color:var(--error); }
