@@ -1,6 +1,6 @@
 {
   "name": "prompt-optimizer",
-  "version": "1.10.0",
+  "version": "1.12.0",
   "private": true,
   "type": "module",
   "description": "Build-free Manifest V3 Gemini prompt optimizer",
@@ -9,5 +9,7 @@
     "validate": "node tools/validate.mjs",
     "test:browser": "node tools/browser-test.mjs"
   },
-  "engines": {"node": ">=22"}
+  "engines": {
+    "node": ">=22"
+  }
 }

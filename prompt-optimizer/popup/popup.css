@@ -173,3 +173,13 @@ input { accent-color:var(--accent); }
 .custom-label { display:block; margin-bottom:7px; font-size:11px; font-weight:650; }
 .request-route { margin:10px 0 0; color:var(--accent); font-size:10px; line-height:1.5; overflow-wrap:anywhere; }
 .request-route[data-state="blocked"] { color:var(--error); }
+
+.target-profile { margin: 0 0 18px; padding: 12px; border: 1px solid var(--line, #dce5df); border-radius: 12px; }
+.target-profile p, .target-profile details { font-size: 12px; line-height: 1.65; margin: 8px 0 0; overflow-wrap:anywhere; }
+.target-profile summary { cursor: pointer; }
+.target-profile select { width: 100%; min-width: 0; }
+.target-profile a { display: block; overflow-wrap: anywhere; margin-top: 4px; color: inherit; }
+.target-profile ul { padding-left: 18px; }
+.target-profile input[type="search"] { width:100%; min-width:0; padding:10px 12px; border:1px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink); font:inherit; }
+#registry-status { flex:1; min-width:0; font-size:11px; overflow-wrap:anywhere; }
+#registry-refresh { flex-shrink:0; }

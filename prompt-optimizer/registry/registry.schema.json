@@ -1,0 +1,655 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000
+    },
+    "generatedAt": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40,
+      "format": "date-time"
+    },
+    "profileRevision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "sources": {
+      "type": "object",
+      "maxProperties": 2000,
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1500,
+            "format": "https-url"
+          }
+        },
+        "required": [
+          "title",
+          "url"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,199}$"
+          },
+          "brand": {
+            "type": "string",
+            "enum": [
+              "chatgpt",
+              "claude",
+              "gemini",
+              "other"
+            ]
+          },
+          "provider": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "family": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "releaseDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 10,
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "capabilities": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "maxItems": 40,
+                "uniqueItems": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contextWindow": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "profileVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000
+          },
+          "candidateProfileId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "maxItems": 100,
+            "uniqueItems": true
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "listed",
+              "not_observed",
+              "retired"
+            ]
+          },
+          "webAvailability": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "confirmed",
+              "unavailable"
+            ]
+          },
+          "lifecycle": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "active",
+              "deprecated",
+              "retired"
+            ]
+          },
+          "sourceRefs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "uniqueItems": true,
+            "maxItems": 30
+          },
+          "firstSeen": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "format": "date-time"
+          },
+          "lastUpdated": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "format": "date-time"
+          },
+          "isNew": {
+            "type": "boolean"
+          },
+          "observations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "openai",
+                    "anthropic",
+                    "google",
+                    "openrouter"
+                  ]
+                },
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "seenAt": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40,
+                  "format": "date-time"
+                },
+                "contextWindow": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 1000000000
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "availability": {
+                  "type": "string",
+                  "enum": [
+                    "listed",
+                    "not_observed",
+                    "retired"
+                  ]
+                }
+              },
+              "required": [
+                "source",
+                "id",
+                "seenAt",
+                "contextWindow",
+                "availability"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 10
+          }
+        },
+        "required": [
+          "id",
+          "brand",
+          "provider",
+          "displayName",
+          "family",
+          "releaseDate",
+          "capabilities",
+          "contextWindow",
+          "profileId",
+          "profileVersion",
+          "candidateProfileId",
+          "aliases",
+          "availability",
+          "webAvailability",
+          "lifecycle",
+          "sourceRefs",
+          "firstSeen",
+          "lastUpdated",
+          "isNew",
+          "observations"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 4,
+      "maxItems": 5000
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "modelId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "brand": {
+            "type": "string",
+            "enum": [
+              "chatgpt",
+              "claude",
+              "gemini",
+              "other"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000
+          },
+          "policyId": {
+            "type": "string",
+            "enum": [
+              "general",
+              "openai",
+              "reasoning",
+              "gpt6",
+              "gpt41",
+              "gemini",
+              "gemini3",
+              "claude",
+              "opus55",
+              "sonnet55",
+              "haiku55",
+              "fable51"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "fallback",
+              "candidate",
+              "validated",
+              "deprecated"
+            ]
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "low",
+              "documented",
+              "measured"
+            ]
+          },
+          "optimization": {
+            "type": "object",
+            "properties": {
+              "instructionStyle": {
+                "type": "string",
+                "enum": [
+                  "direct",
+                  "concise"
+                ]
+              },
+              "contextStructure": {
+                "type": "string",
+                "enum": [
+                  "task_dependent",
+                  "context_first",
+                  "delimited"
+                ]
+              },
+              "reasoningGuidance": {
+                "type": "string",
+                "enum": [
+                  "internal_only",
+                  "observable_checks"
+                ]
+              },
+              "outputFormatting": {
+                "type": "string",
+                "enum": [
+                  "explicit",
+                  "minimal"
+                ]
+              },
+              "fewShotStrategy": {
+                "type": "string",
+                "enum": [
+                  "conditional",
+                  "provided_only"
+                ]
+              },
+              "constraintHandling": {
+                "type": "string",
+                "enum": [
+                  "preserve"
+                ]
+              },
+              "tokenEfficiency": {
+                "type": "string",
+                "enum": [
+                  "balanced",
+                  "compact"
+                ]
+              },
+              "multimodalSupport": {
+                "type": "string",
+                "enum": [
+                  "provided_only"
+                ]
+              }
+            },
+            "required": [
+              "instructionStyle",
+              "contextStructure",
+              "reasoningGuidance",
+              "outputFormatting",
+              "fewShotStrategy",
+              "constraintHandling",
+              "tokenEfficiency",
+              "multimodalSupport"
+            ],
+            "additionalProperties": false
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "verify_scope",
+                "cite_provided_evidence",
+                "finish_deliverable",
+                "state_uncertainty"
+              ]
+            },
+            "uniqueItems": true,
+            "maxItems": 4
+          },
+          "sourceRefs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "uniqueItems": true,
+            "maxItems": 30
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "schema": {
+                "type": "boolean"
+              },
+              "performance": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "passed": {
+                        "type": "boolean"
+                      },
+                      "reportSha256": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      "profileSha256": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      "evaluatedCases": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000000000
+                      },
+                      "targetCalls": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000000000
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 40,
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "passed",
+                      "reportSha256",
+                      "profileSha256",
+                      "evaluatedCases",
+                      "targetCalls",
+                      "createdAt"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "schema",
+              "performance"
+            ],
+            "additionalProperties": false
+          },
+          "updatedAt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "format": "date-time"
+          },
+          "generation": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "inherited",
+                  "llm"
+                ]
+              },
+              "documentDigest": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "generatorModel": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "kind",
+              "documentDigest",
+              "generatorModel",
+              "createdAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "modelId",
+          "brand",
+          "version",
+          "policyId",
+          "status",
+          "confidence",
+          "optimization",
+          "recommendations",
+          "sourceRefs",
+          "validation",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 4,
+      "maxItems": 15000
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "format": "date-time"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "new",
+              "changed",
+              "missing",
+              "candidate",
+              "rejected",
+              "promoted",
+              "rollback"
+            ]
+          },
+          "modelKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "at",
+          "type",
+          "modelKey",
+          "detail"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 200
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "version",
+    "generatedAt",
+    "profileRevision",
+    "sources",
+    "models",
+    "profiles",
+    "changes"
+  ],
+  "additionalProperties": false
+}

@@ -26,7 +26,7 @@ export const EVALUATION_CASES = Object.freeze([
   {
     id: 'research-en', name: '출처 기반 조사', expectedTask: 'research', expectedPromptLanguage: 'en',
     source: 'Research current solid-state battery commercialization progress. Cite sources actually consulted and distinguish confirmed facts from forecasts through 2030.',
-    settings: { targetModel: 'perplexity', responseLanguage: 'en', promptLanguage: 'en', mode: 'precision' },
+    settings: { targetModel: 'chatgpt', responseLanguage: 'en', promptLanguage: 'en', mode: 'precision' },
     criticalDetails: ['solid-state battery', '2030', 'confirmed facts'],
   },
   {
@@ -44,7 +44,7 @@ export const EVALUATION_CASES = Object.freeze([
   {
     id: 'data-en', name: '데이터 분석 제약', expectedTask: 'data_analysis', expectedPromptLanguage: 'en',
     source: 'Analyze the CSV sales data for Q1 and Q2. Keep missing values visible, calculate median revenue by region, and return a Markdown table plus three findings.',
-    settings: { targetModel: 'perplexity', responseLanguage: 'en', promptLanguage: 'en', mode: 'precision' },
+    settings: { targetModel: 'chatgpt', responseLanguage: 'en', promptLanguage: 'en', mode: 'precision' },
     criticalDetails: ['Q1', 'Q2', 'median revenue', 'Markdown'],
   },
 ]);

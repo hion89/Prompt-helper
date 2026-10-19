@@ -31,6 +31,15 @@ test('toolbar visibility and per-site positions are normalized', () => {
   assert.deepEqual(configured.toolbarPositions, { chatgpt: { x: 1, y: 0 }, gemini: { x: 0.25, y: 0.75 } });
   assert.deepEqual(normalizeSettings({ toolbarPositions: { chatgpt: { x: 'bad', y: 0 } } }).toolbarPositions, {});
 });
+test('destination variants are brand-scoped and migrate safely; minimize is separate from hiding', () => {
+  const normalized = normalizeSettings({ targetModel: 'claude', targetVariants: { chatgpt: 'gpt-4.1', claude: 'gpt-4.1', gemini: 'gemini-3.5-flash-lite', unknown: 'x' }, toolbarMinimized: true });
+  assert.deepEqual(normalized.targetVariants, { chatgpt: 'gpt-4.1', claude: 'general', gemini: 'gemini-3.5-flash-lite', other: 'general' });
+  assert.equal(normalized.toolbarMinimized, true);
+  assert.equal(normalized.toolbarEnabled, true);
+  assert.equal(normalizeSettings({ targetModel: 'perplexity' }).targetModel, 'chatgpt');
+  assert.equal(normalizeSettings({ targetVariants: { chatgpt: 'openai/gpt-4.1' } }).targetVariants.chatgpt, 'gpt-4.1');
+  assert.equal(normalizeSettings({ targetVariants: { claude: 'openai/gpt-4.1' } }).targetVariants.claude, 'general');
+});
 test('rapid preference writes preserve previous settings and recover after errors', async () => {
   let stored = {};
   let fail = false;
@@ -50,5 +59,7 @@ test('rapid preference writes preserve previous settings and recover after error
   assert.equal((await getSettings()).toolbarEnabled, false);
   assert.deepEqual((await getSettings()).toolbarPositions, { claude: { x: 0.2, y: 0.8 } });
   assert.equal((await getSettings()).theme, 'dark', 'toolbar update preserves unrelated settings');
+  await Promise.all([saveSettings({ targetVariants: { chatgpt: 'gpt-4.1' } }), saveSettings({ targetVariants: { claude: 'claude-opus-5-5' } })]);
+  assert.deepEqual((await getSettings()).targetVariants, { chatgpt: 'gpt-4.1', gemini: 'general', claude: 'claude-opus-5-5', other: 'general' });
   delete globalThis.chrome;
 });

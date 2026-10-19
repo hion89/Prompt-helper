@@ -1,0 +1,97 @@
+name: Discover models and publish validated registry
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: model-registry
+  cancel-in-progress: false
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+      ref: ${{ steps.commit.outputs.ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Restore public-document cache and daily call ledger
+        uses: actions/cache/restore@v4
+        with:
+          path: prompt-optimizer/.registry-cache
+          key: registry-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: registry-
+      - name: Discover metadata and bounded profile candidates
+        working-directory: prompt-optimizer
+        env:
+          OPENAI_MODELS_API_KEY: ${{ secrets.OPENAI_MODELS_API_KEY }}
+          ANTHROPIC_MODELS_API_KEY: ${{ secrets.ANTHROPIC_MODELS_API_KEY }}
+          GEMINI_MODELS_API_KEY: ${{ secrets.GEMINI_MODELS_API_KEY }}
+          OPENROUTER_MODELS_API_KEY: ${{ secrets.OPENROUTER_MODELS_API_KEY }}
+          PROFILE_GENERATOR_API_KEY: ${{ secrets.PROFILE_GENERATOR_API_KEY }}
+          OPENROUTER_EVAL_API_KEY: ${{ secrets.OPENROUTER_EVAL_API_KEY }}
+          PROFILE_GENERATOR_MODEL: ${{ vars.PROFILE_GENERATOR_MODEL }}
+          MAX_PROFILE_LLM_CALLS: ${{ vars.MAX_PROFILE_LLM_CALLS || '0' }}
+          MAX_PROFILE_COST_USD: ${{ vars.MAX_PROFILE_COST_USD || '0' }}
+          PROFILE_INPUT_USD_PER_MILLION: ${{ vars.PROFILE_INPUT_USD_PER_MILLION || '0' }}
+          PROFILE_OUTPUT_USD_PER_MILLION: ${{ vars.PROFILE_OUTPUT_USD_PER_MILLION || '0' }}
+          MAX_PROFILE_EVALUATION_CALLS: ${{ vars.MAX_PROFILE_EVALUATION_CALLS || '0' }}
+          MAX_PROFILE_EVALUATION_USD: ${{ vars.MAX_PROFILE_EVALUATION_USD || '0' }}
+          EVALUATION_INPUT_USD_PER_MILLION: ${{ vars.EVALUATION_INPUT_USD_PER_MILLION || '0' }}
+          EVALUATION_OUTPUT_USD_PER_MILLION: ${{ vars.EVALUATION_OUTPUT_USD_PER_MILLION || '0' }}
+        run: node tools/registry/run.mjs
+      - name: Run regression and registry validation
+        working-directory: prompt-optimizer
+        run: |
+          node --test tests/*.test.js
+          node tools/validate.mjs
+      - name: Save call ledger even when a later step fails
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: prompt-optimizer/.registry-cache
+          key: registry-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Upload operational report without keys
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: registry-report-${{ github.run_id }}
+          path: |
+            prompt-optimizer/.registry-cache/last-run.json
+            prompt-optimizer/.registry-cache/evaluations/*.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Commit only validated public registry files
+        id: commit
+        shell: bash
+        run: |
+          git add -- docs/registry prompt-optimizer/registry prompt-optimizer/shared/registry-seed.js
+          if git diff --cached --quiet; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'chore: update model registry'
+            git push origin HEAD:main
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+            echo "ref=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+  deploy:
+    needs: discover
+    if: needs.discover.outputs.changed == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
+    with:
+      ref: ${{ needs.discover.outputs.ref }}

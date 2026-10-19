@@ -4,7 +4,7 @@
 <body><main>
   <div class="eyebrow">PROMPT OPTIMIZER</div>
   <div class="title-row"><h1>나의 AI 연결</h1><div class="title-links"><a class="help-link" href="../help/help.html" target="_blank" rel="noopener">사용 설명서 ↗</a><a class="help-link" href="../evaluation/evaluation.html" target="_blank" rel="noopener">성능 평가 ↗</a><a class="help-link" href="../diagnostics/diagnostics.html" target="_blank" rel="noopener">오류 진단 ↗</a></div></div>
-  <p class="intro">개인 Gemini API 키로 요청의 의미를 분석하고 프롬프트를 새로 작성합니다. 최종 프롬프트는 ChatGPT·Claude·Gemini·Perplexity에 맞출 수 있습니다.</p>
+  <p class="intro">개인 Gemini API 키로 요청의 의미를 분석하고 프롬프트를 새로 작성합니다. 최종 프롬프트를 사용할 ChatGPT·Claude·Gemini 브랜드와 세부 모델은 확장 팝업에서 선택하세요. 아래 설정은 최적화를 실행하는 Gemini API 모델입니다.</p>
   <section class="card">
     <label>최적화 제공업체</label>
     <div class="fixed-provider">Gemini · 무료 등급 지원 모델</div>
@@ -13,6 +13,7 @@
       <label for="gemini-model">이 키에서 조회된 Gemini 모델</label>
       <div class="actions"><button id="list-models" class="secondary" type="button">사용 가능한 모델 조회</button></div>
       <select id="gemini-model" disabled><option value="">먼저 모델 목록을 조회해 주세요</option></select>
+      <p id="model-selection" class="muted" aria-live="polite">모델 목록을 조회하면 저장할 모델을 선택할 수 있습니다.</p>
       <button id="save-model" type="button" disabled>선택한 모델 저장</button>
       <p id="model-help" class="muted">모델 목록 조회는 생성 요청을 보내지 않습니다. 목록에 있어도 무료 등급·잔여 한도와 실제 생성 권한은 별도로 확인해야 합니다. 모델 변경은 버튼을 눌렀을 때만 저장됩니다.</p>
     </div>

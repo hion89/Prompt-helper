@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Prompt Optimizer",
-  "version": "1.10.0",
+  "version": "1.12.0",
   "description": "개인 Gemini API 키로 자연어 요청을 분석해 맞춤 프롬프트로 재작성합니다.",
   "minimum_chrome_version": "112",
   "permissions": [
@@ -58,21 +58,10 @@
         "content/common.js"
       ],
       "run_at": "document_idle"
-    },
-    {
-      "matches": [
-        "https://perplexity.ai/*",
-        "https://www.perplexity.ai/*"
-      ],
-      "js": [
-        "content/perplexity.js",
-        "content/common.js"
-      ],
-      "run_at": "document_idle"
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; connect-src https://generativelanguage.googleapis.com"
+    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; connect-src https://generativelanguage.googleapis.com https://hion89.github.io"
   },
   "options_ui": {
     "page": "options/options.html",
@@ -80,5 +69,8 @@
   },
   "optional_host_permissions": [
     "https://generativelanguage.googleapis.com/*"
+  ],
+  "host_permissions": [
+    "https://hion89.github.io/Prompt-helper/registry/*"
   ]
 }

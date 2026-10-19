@@ -19,7 +19,7 @@
     .panel { --bg:#fff; --fg:#24302b; --muted:#627269; --line:#dce5df; --accent:#267754; --hover:#eaf5ee;
       width:max-content;max-width:calc(100vw - 24px);font:12px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--fg); }
     .panel.dark { --bg:#1c2722;--fg:#e7f1eb;--muted:#aec3b6;--line:#3a4d40;--accent:#a3e5bd;--hover:#304b3a; }
-    .bar { display:flex;align-items:center;gap:7px;padding:5px 7px;background:var(--bg);border:1px solid var(--line);border-radius:11px;
+    .bar { display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:5px 7px;background:var(--bg);border:1px solid var(--line);border-radius:11px;
       box-shadow:0 4px 18px #071c1620;pointer-events:auto; }
     button { appearance:none;border:0;border-radius:7px;background:transparent;color:var(--fg);font:inherit;white-space:nowrap;padding:6px 8px;cursor:pointer; }
     button:hover:not(:disabled) { background:var(--hover); }
@@ -29,7 +29,10 @@
     .drag:active { cursor:grabbing; }
     .hide { color:var(--muted);padding:6px 5px;font-size:15px;line-height:1; }
     .optimize { font-weight:700;color:var(--accent); }
-    .mode { border-left:1px solid var(--line);padding-left:8px;color:var(--muted);font-size:10px;white-space:nowrap;flex:0 0 auto; }
+    .mode { border-left:1px solid var(--line);padding-left:8px;color:var(--muted);font-size:10px;white-space:pre-line;overflow-wrap:anywhere;max-width:210px;flex:0 1 auto; }
+    .mini-icon { display:none;width:40px;height:40px;pointer-events:auto;background:var(--bg);border:1px solid var(--line);border-radius:50%;box-shadow:0 4px 18px #071c1620;color:var(--accent);font-size:23px;touch-action:none;user-select:none; }
+    .panel.minimized .bar, .panel.minimized .status { display:none; }
+    .panel.minimized .mini-icon { display:block; }
     .mode[data-ready="true"] { color:var(--accent); }
     .mode[data-ready="false"] { color:#be3939; }
     .dark .mode[data-ready="false"] { color:#ffaaaa; }
@@ -72,16 +75,27 @@
   hideButton.textContent = '×';
   hideButton.title = '미니 도구 숨기기 · 확장 프로그램 팝업에서 다시 켤 수 있습니다.';
   hideButton.setAttribute('aria-label', '미니 도구 숨기기');
+  const minimizeButton = document.createElement('button');
+  minimizeButton.type = 'button';
+  minimizeButton.className = 'minimize';
+  minimizeButton.textContent = '−';
+  minimizeButton.title = '작은 아이콘으로 최소화 · 아이콘을 클릭하면 다시 펼칩니다.';
+  minimizeButton.setAttribute('aria-label', '미니 도구 최소화');
+  const miniIcon = document.createElement('button');
+  miniIcon.type = 'button';
+  miniIcon.className = 'mini-icon';
+  miniIcon.textContent = '✦';
+  miniIcon.setAttribute('aria-label', 'Prompt Optimizer 펼치기');
   const status = document.createElement('div');
   status.className = 'status';
   status.setAttribute('role', 'status');
   status.setAttribute('aria-live', 'polite');
   status.setAttribute('aria-atomic', 'true');
-  bar.append(dragButton, optimizeButton, undoButton, modeBadge, hideButton);
-  panel.append(bar, status);
+  bar.append(dragButton, optimizeButton, undoButton, modeBadge, minimizeButton, hideButton);
+  panel.append(bar, miniIcon, status);
   shadow.append(style, panel);
 
-  let settings = { mode: 'default', theme: 'system', toolbarEnabled: false, toolbarPositions: {} };
+  let settings = { mode: 'default', theme: 'system', toolbarEnabled: false, toolbarMinimized: false, toolbarPositions: {} };
   let apiState = null;
   let composer = null;
   let originals = new WeakMap();
@@ -96,6 +110,7 @@
   let positionFrame = 0;
   let statusTimer = 0;
   let dragState = null;
+  let suppressMiniClick = false;
   let observer = null;
   let resizeObserver = null;
   let observing = false;
@@ -158,12 +173,12 @@
     return Boolean(record && record.url === location.href && record.optimized === readText(element));
   }
 
-  function showStatus(message, error = false) {
+  function showStatus(message, error = false, persistent = false) {
     clearTimeout(statusTimer);
     status.textContent = message;
     status.className = `status${message ? ' visible' : ''}${error ? ' error' : ''}`;
     queuePosition();
-    if (message && !error) statusTimer = setTimeout(() => showStatus(''), 6500);
+    if (message && !error && !persistent) statusTimer = setTimeout(() => showStatus(''), 6500);
   }
 
   function applySettings(value, api) {
@@ -172,9 +187,13 @@
     const mode = MODE_NAMES[settings.mode] ? settings.mode : 'default';
     const name = mode === 'custom' ? 'Custom · ' + (settings.customType === 'manual' ? '수동' : '자동') : MODE_NAMES[mode];
     const apiLabel = !apiState ? '상태 확인 중' : !apiState.configured ? '키 미등록' : !apiState.granted ? '권한 필요' : '키 등록됨';
-    modeBadge.textContent = 'Gemini API · ' + apiLabel + ' · ' + name;
+    const variant = settings.targetVariants?.[site.model];
+    const destination = variant && variant !== 'general' ? variant : site.name + ' 공통';
+    modeBadge.textContent = 'Gemini API · ' + apiLabel + ' · ' + name + '\n대상: ' + destination;
     modeBadge.dataset.ready = String(apiState?.ready === true);
-    modeBadge.title = `Gemini API ${apiLabel} · ${site.name} · ${name}. 키와 권한 준비 상태이며 실제 인증과 할당량은 요청 시 확인합니다. 설정은 확장 프로그램 팝업에서 변경합니다.`;
+    modeBadge.title = `Gemini API ${apiLabel} · 대상 ${destination} · ${name}. 대상 모델은 팝업에서 직접 선택합니다. 실제 웹 AI의 모델을 변경하지 않습니다. 키와 권한 준비 상태이며 실제 인증과 할당량은 요청 시 확인합니다.`;
+    panel.classList.toggle('minimized', settings.toolbarMinimized === true);
+    miniIcon.title = `Prompt Optimizer 펼치기 · ${destination} · ${name}. 끌어서 이동할 수 있습니다.`;
     panel.classList.toggle('dark', settings.theme === 'dark' || ((settings.theme === 'system' || settings.theme === 'auto') && systemTheme.matches));
     syncToolbarRuntime();
     updateButtons();
@@ -200,6 +219,8 @@
   }
 
   function updateButtons() {
+    miniIcon.textContent = operation ? '…' : '✦';
+    miniIcon.setAttribute('aria-label', operation ? '최적화 진행 중 · Prompt Optimizer 펼치기' : 'Prompt Optimizer 펼치기');
     optimizeButton.disabled = Boolean(operation) || apiState?.ready !== true;
     optimizeButton.title = apiState?.ready ? '등록한 개인 키로 Gemini API에 원문과 설정을 보내 최적화합니다.' : '확장 프로그램 팝업에서 Gemini API 키와 연결 권한을 확인해 주세요.';
     optimizeButton.textContent = operation ? '최적화 중…' : '✦ Optimize';
@@ -414,21 +435,31 @@
     const before = readText(element);
     if (!before.trim()) return showStatus('입력창에 요청을 먼저 작성해 주세요.', true);
     if (before.length > MAX_SOURCE_LENGTH) return showStatus('12,000자 이내의 요청을 입력해 주세요.', true);
-    const request = { element, before, token: composerToken(element), url: location.href, revision: revisions.get(element) || 0 };
+    const request = { element, before, token: composerToken(element), url: location.href, revision: revisions.get(element) || 0, configuration: optimizationFingerprint() };
     operation = request;
     updateButtons();
-    showStatus('Gemini API로 원문을 보내 재작성하고 있습니다…');
+    const started = Date.now();
+    const showProgress = () => showStatus(`Gemini API 응답 대기 ${Math.floor((Date.now() - started) / 1000)}초 / 최대 90초…`, false, true);
+    showProgress();
+    const progressTimer = setInterval(showProgress, 1000);
     try {
       const response = await chrome.runtime.sendMessage({ type: 'OPTIMIZE', text: before, settings: { targetModel: site.model } });
       if (!response?.ok) throw new Error(response?.error || '최적화하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      if (request.configuration !== optimizationFingerprint()) throw new Error('최적화 중 모델이나 모드 설정이 변경되어 적용하지 않았습니다. 다시 Optimize를 눌러 주세요.');
       if ((revisions.get(element) || 0) !== request.revision) throw new Error('최적화 중 입력 내용이 변경되어 덮어쓰지 않았습니다. 다시 Optimize를 눌러 주세요.');
       replaceGuarded(element, response.result?.text, before, request.token, request.url);
     } catch (error) {
       showStatus(error?.message?.includes('Extension context invalidated') ? '확장 프로그램이 업데이트되었습니다. 이 페이지를 새로고침해 주세요.' : (error.message || '최적화하지 못했습니다.'), true);
     } finally {
+      clearInterval(progressTimer);
       if (operation === request) operation = null;
       updateButtons();
     }
+  }
+
+  function optimizationFingerprint() {
+    return JSON.stringify([settings.targetVariants?.[site.model] || 'general', settings.targetProfileRevision, settings.mode, settings.responseLanguage, settings.promptLanguage, settings.geminiModel,
+      ...(settings.mode === 'custom' ? [settings.customType, settings.customConcepts] : [])]);
   }
 
   // Page scripts can see this open shadow root. Only genuine user gestures may
@@ -456,6 +487,37 @@
     updateSavedPosition(null);
     persistToolbarState({ position: null });
     queuePosition();
+  });
+  function setMinimized(minimized) {
+    dragState = null;
+    applySettings({ toolbarMinimized: minimized });
+    persistToolbarState({ minimized });
+    (minimized ? miniIcon : minimizeButton).focus({ preventScroll: true });
+  }
+  minimizeButton.addEventListener('click', event => { if (event.isTrusted) setMinimized(true); });
+  miniIcon.addEventListener('pointerdown', event => {
+    if (!event.isTrusted || event.button !== 0) return;
+    const rect = panel.getBoundingClientRect();
+    suppressMiniClick = false;
+    dragState = { x: event.clientX, y: event.clientY, left: rect.left, top: rect.top };
+    miniIcon.setPointerCapture(event.pointerId);
+  });
+  miniIcon.addEventListener('pointermove', event => {
+    if (!dragState || !miniIcon.hasPointerCapture(event.pointerId)) return;
+    if (Math.hypot(event.clientX - dragState.x, event.clientY - dragState.y) > 5) suppressMiniClick = true;
+    if (suppressMiniClick) moveToolbar(event.clientX, event.clientY);
+  });
+  miniIcon.addEventListener('pointerup', event => {
+    if (!dragState) return;
+    if (miniIcon.hasPointerCapture(event.pointerId)) miniIcon.releasePointerCapture(event.pointerId);
+    if (suppressMiniClick) finishToolbarMove();
+    else dragState = null;
+  });
+  miniIcon.addEventListener('pointercancel', () => { suppressMiniClick = true; finishToolbarMove(); });
+  miniIcon.addEventListener('click', event => {
+    if (!event.isTrusted) return;
+    if (suppressMiniClick && event.detail !== 0) { suppressMiniClick = false; return; }
+    setMinimized(false);
   });
   hideButton.addEventListener('click', event => {
     if (!event.isTrusted) return;

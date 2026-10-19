@@ -92,16 +92,18 @@ try {
     await until(() => cdp.evaluate('document.readyState === "complete"'), 'page load');
     return cdp;
   }
-  async function clickOptimize(cdp) {
-    const point = await cdp.evaluate('(() => { const r=document.querySelector("#prompt-optimizer-toolbar").shadowRoot.querySelector(".optimize").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()');
+  async function clickToolbar(cdp, selector) {
+    const point = await cdp.evaluate('(() => { const r=document.querySelector("#prompt-optimizer-toolbar").shadowRoot.querySelector(' + JSON.stringify(selector) + ').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()');
     await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...point });
     await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...point });
   }
+  const clickOptimize = cdp => clickToolbar(cdp, '.optimize');
+  const version = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'utf8')).version;
   const compiled = await new LocalPromptOptimizer().optimize('이 코드 왜 안되는지 분석해줘', { mode: 'precision', responseLanguage: 'ko', targetModel: 'chatgpt' });
   const stub = [
     "window.__listeners=[];window.__storageListeners=[];window.__api={configured:true,granted:true,ready:true,persistent:false}; window.__settings={targetModel:'chatgpt',responseLanguage:'ko',mode:'precision',theme:'light'};",
     'window.__result=' + JSON.stringify(compiled) + '; window.__delay=0; window.__submitted=0; window.__keydown=0; window.__runtimeMessages=[];',
-    "window.chrome={runtime:{id:'fixture-extension',getURL:p=>'/'+p,getManifest:()=>({name:'Prompt Optimizer',version:'1.10.0'}),onMessage:{addListener:fn=>__listeners.push(fn)},sendMessage:async m=>{__runtimeMessages.push(m);await new Promise(r=>setTimeout(r,__delay));return m.type==='SET_TOOLBAR_STATE'?{ok:true}:m.type==='GET_PUBLIC_SETTINGS'?{ok:true,settings:{...__settings,toolbarEnabled:true},api:__api}:m.type==='API_STATUS'?{ok:true,status:{gemini:__api}}:{ok:true,result:__result}}},",
+    "window.chrome={runtime:{id:'fixture-extension',getURL:p=>'/'+p,getManifest:()=>({name:'Prompt Optimizer',version:" + JSON.stringify(version) + "}),onMessage:{addListener:fn=>__listeners.push(fn)},sendMessage:async m=>{__runtimeMessages.push(m);await new Promise(r=>setTimeout(r,__delay));return m.type==='SET_TOOLBAR_STATE'?{ok:true}:m.type==='GET_PUBLIC_SETTINGS'?{ok:true,settings:{...__settings,toolbarEnabled:true},api:__api}:m.type==='API_STATUS'?{ok:true,status:{gemini:__api}}:{ok:true,result:__result}}},",
     "storage:{local:{get:async()=>({settings:__settings}),set:async v=>Object.assign(__settings,v.settings)},session:{get:async()=>({}),set:async()=>{},remove:async()=>{}},onChanged:{addListener:fn=>__storageListeners.push(fn)}},permissions:{onAdded:{addListener:()=>{}},onRemoved:{addListener:()=>{}}},",
     "tabs:{query:async()=>[{id:1}],sendMessage:async()=>({ok:false,error:'연결된 AI 입력창이 없습니다.'}),reload:async id=>{window.__reloads=(window.__reloads||0)+1;window.__reloadedTab=id}}};",
     "window.__message=m=>new Promise(resolve=>{let waiting=false;for(const fn of __listeners){if(fn(m,{id:chrome.runtime.id},resolve)===true)waiting=true;}if(!waiting)setTimeout(()=>resolve(undefined),100);});",
@@ -110,7 +112,7 @@ try {
   const errors = [];
   const scripts = {};
   for (const name of ['chatgpt','claude','gemini','perplexity','common']) scripts[name] = await readFile(path.join(root, 'content', name + '.js'), 'utf8');
-  for (const site of ['chatgpt','claude','gemini','perplexity']) {
+  for (const site of ['chatgpt','claude','gemini']) {
     const p = await page(base + '/fixture', stub);
     p.handlers.push(event => { if (event.method === 'Runtime.exceptionThrown') errors.push(event.params.exceptionDetails.text); });
     const markup = site === 'chatgpt' ? '<div data-type="unified-composer"><div class="ProseMirror" contenteditable="true" data-virtualkeyboard="true" role="textbox" aria-label="ChatGPT에게 물어보세요"></div></div>' :
@@ -127,6 +129,7 @@ try {
     const rescanned = await p.evaluate('__message({type:"PO_RESCAN"})');
     assert.equal(rescanned.ok, true, site + ' composer rescan'); assert.equal(rescanned.text, source);
     if (site === 'chatgpt') {
+      await until(() => p.evaluate('document.querySelector("#prompt-optimizer-toolbar").getBoundingClientRect().width>0'), 'visible toolbar before drag');
       assert.equal(await p.evaluate('(() => {const e=document.querySelector("#prompt-optimizer-toolbar").shadowRoot.querySelector(".mode");return e.scrollWidth<=e.clientWidth && e.textContent.startsWith("Gemini API · ")})()'), true, 'toolbar mode text is not clipped');
       const drag = await p.evaluate('(() => { const host=document.querySelector("#prompt-optimizer-toolbar");const r=host.shadowRoot.querySelector(".drag").getBoundingClientRect();const h=host.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,left:h.left,top:h.top};})()');
       await p.send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', buttons: 1, clickCount: 1, x: drag.x, y: drag.y });
@@ -141,6 +144,26 @@ try {
       await p.evaluate('__message({type:"PO_SETTINGS",settings:{toolbarEnabled:true,toolbarPositions:{chatgpt:{x:.2,y:.8}}}})');
       await until(() => p.evaluate('getComputedStyle(document.querySelector("#prompt-optimizer-toolbar")).display==="block"'), 'toolbar re-enable');
       pass('Toolbar can be dragged, hidden, and re-enabled');
+      await p.evaluate('document.querySelector("#prompt-optimizer-toolbar").shadowRoot.querySelector(".minimize").click()');
+      assert.equal(await p.evaluate('document.querySelector("#prompt-optimizer-toolbar").shadowRoot.querySelector(".panel").classList.contains("minimized")'), false, 'page-script clicks cannot change minimized state');
+      const apiCallsBefore = await p.evaluate('__runtimeMessages.filter(m=>m.type==="OPTIMIZE").length');
+      await clickToolbar(p, '.minimize');
+      await until(() => p.evaluate('document.querySelector("#prompt-optimizer-toolbar").getBoundingClientRect().width===40'), 'small minimized icon');
+      assert.equal(await p.evaluate('__runtimeMessages.some(m=>m.type==="SET_TOOLBAR_STATE" && m.minimized===true)'), true);
+      const icon = await p.evaluate('(() => {const r=document.querySelector("#prompt-optimizer-toolbar").getBoundingClientRect();return {x:r.x+20,y:r.y+20}})()');
+      await p.send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', buttons: 1, clickCount: 1, ...icon });
+      await p.send('Input.dispatchMouseEvent', { type: 'mouseMoved', button: 'left', buttons: 1, x: icon.x+35, y: icon.y-25 });
+      await p.send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', buttons: 0, clickCount: 1, x: icon.x+35, y: icon.y-25 });
+      assert.equal(await p.evaluate('document.querySelector("#prompt-optimizer-toolbar").shadowRoot.querySelector(".panel").classList.contains("minimized")'), true, 'drag must not expand icon');
+      await clickToolbar(p, '.mini-icon');
+      await until(() => p.evaluate('document.querySelector("#prompt-optimizer-toolbar").getBoundingClientRect().width>40'), 'icon expands');
+      assert.equal(await p.evaluate('__runtimeMessages.filter(m=>m.type==="OPTIMIZE").length'), apiCallsBefore, 'minimize, drag and restore never call API');
+      await p.evaluate('__message({type:"PO_SETTINGS",settings:{toolbarMinimized:true}})');
+      await until(() => p.evaluate('document.querySelector("#prompt-optimizer-toolbar").getBoundingClientRect().width===40'), 'saved minimize state');
+      await p.evaluate('__message({type:"PO_SETTINGS",settings:{toolbarMinimized:false,targetVariants:{chatgpt:"gpt-4.1"}}})');
+      await until(() => p.evaluate('document.querySelector("#prompt-optimizer-toolbar").getBoundingClientRect().width>40'), 'popup restores toolbar');
+      assert.match(await p.evaluate('document.querySelector("#prompt-optimizer-toolbar").shadowRoot.querySelector(".mode").textContent'), /gpt-4.1/);
+      pass('Trusted minimize, icon drag, restoration and saved state work without API calls');
       await p.evaluate('__message({type:"PO_SETTINGS",settings:{mode:"custom",customType:"manual"},api:{configured:false,granted:true,ready:false}})');
       assert.equal(await p.evaluate('document.querySelector("#prompt-optimizer-toolbar").shadowRoot.querySelector(".optimize").disabled'), true);
       assert.equal(await p.evaluate('document.querySelector("#prompt-optimizer-toolbar").shadowRoot.querySelector(".mode").textContent.includes("키 미등록")'), true);
@@ -172,6 +195,12 @@ try {
       await pause(500);
       assert.equal(await p.evaluate('__editor.value'), '사용자가 계속 작성 중');
       pass('Optimize does not overwrite edits made while waiting');
+      const beforeModelChange = await p.evaluate('__editor.innerText');
+      await clickOptimize(p);
+      await p.evaluate('__message({type:"PO_SETTINGS",settings:{targetVariants:{chatgpt:"gpt-4o"}}})');
+      await until(() => p.evaluate('document.querySelector("#prompt-optimizer-toolbar").shadowRoot.querySelector(".status").textContent.includes("모델이나 모드 설정이 변경")'), 'obsolete target-profile result blocked');
+      assert.equal(await p.evaluate('__editor.innerText'), beforeModelChange);
+      pass('Mini toolbar discards a result when its destination model changes while waiting');
       await p.evaluate('__editor.remove();document.querySelector("form").innerHTML=\'<div id="prompt-textarea" contenteditable="true" role="textbox"><p>new editor</p></div>\';__editor=document.querySelector("[contenteditable]");__editor.focus();');
       await pause(300);
       const next = await p.evaluate('__message({type:"PO_GET_COMPOSER"})');
@@ -200,6 +229,27 @@ try {
     await writeFile(path.join(artifacts, 'popup-custom-' + type + '.png'), Buffer.from(customScreenshot.data, 'base64'));
   }
   const help = await page(base + '/help/help.html');
+  const optionsStub = stub + `
+    const previousSend=chrome.runtime.sendMessage;
+    chrome.runtime.sendMessage=async m=>{
+      if(m.type==='API_STATUS')return {ok:true,status:{gemini:{...__api,model:__settings.geminiModel||'gemini-3.5-flash-lite'}}};
+      if(m.type==='API_LIST_MODELS')return {ok:true,models:[{id:'gemini-3.5-flash-lite',name:'Flash Lite'},{id:'gemini-2.5-flash',name:'Flash'}]};
+      if(m.type==='API_SAVE_MODEL'){__settings.geminiModel=m.model;__settings.geminiModelSelected=true;return {ok:true,status:{gemini:{...__api,model:m.model}}}};
+      return previousSend(m);
+    };`;
+  const options = await page(base + '/options/options.html', optionsStub);
+  await until(() => options.evaluate('!document.querySelector("#list-models").disabled'), 'options key status');
+  await options.evaluate('document.querySelector("#list-models").click();');
+  await until(() => options.evaluate('document.querySelector("#gemini-model").options.length===2 && !document.querySelector("#gemini-model").disabled'), 'options model list');
+  await options.evaluate('document.querySelector("#gemini-model").value="gemini-2.5-flash";document.querySelector("#gemini-model").dispatchEvent(new Event("change"));');
+  assert.equal(await options.evaluate('document.querySelector("#save-model").disabled'), false);
+  await options.evaluate('document.querySelector("#save-model").click();');
+  await until(() => options.evaluate('document.querySelector("#model").textContent.includes("gemini-2.5-flash") && !document.querySelector("#save-model").disabled'), 'options model persisted');
+  assert.equal(await options.evaluate('__settings.geminiModel'), 'gemini-2.5-flash');
+  await options.evaluate('chrome.runtime.sendMessage=async()=>{throw new Error("Extension context invalidated.")};document.querySelector("#save-model").click();');
+  await until(() => options.evaluate('document.querySelector("#feedback").dataset.error==="true"'), 'options stale context failure');
+  assert.equal(await options.evaluate('document.querySelector("#feedback").textContent.includes("설정 탭")'), true);
+  pass('Model selection saves through background, confirms persistence and explains stale settings tabs');
   await help.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 760, deviceScaleFactor: 1, mobile: true });
   assert.equal(await help.evaluate('document.querySelectorAll("main section").length>=6'), true);
   assert.equal(await help.evaluate('document.querySelectorAll("#problems details").length>=8'), true);
@@ -208,7 +258,7 @@ try {
   pass('Beginner guide is always reachable and includes responsive troubleshooting');
   const diagnostics = await page(base + '/diagnostics/diagnostics.html', stub);
   await diagnostics.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 760, deviceScaleFactor: 1, mobile: true });
-  await until(() => diagnostics.evaluate('document.querySelector("#version")?.textContent.includes("1.10.0")'), 'diagnostics load');
+  await until(() => diagnostics.evaluate('document.querySelector("#version")?.textContent.includes(' + JSON.stringify(version) + ')'), 'diagnostics load');
   assert.equal(await diagnostics.evaluate('document.querySelectorAll("#copy-report,#download-report,#report-file").length'), 3);
   assert.equal(await diagnostics.evaluate('document.documentElement.scrollWidth<=innerWidth'), true, 'Diagnostics has no horizontal overflow');
   assert.equal(await popup.evaluate('document.querySelector("#diagnostics-link")?.target'), '_blank');

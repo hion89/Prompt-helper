@@ -1,12 +1,16 @@
 import { DEFAULT_SETTINGS, getSettings, normalizeSettings, saveSettings } from '../shared/settings.js';
 import { recordDiagnostic } from '../shared/diagnostics.js';
 import { CUSTOM_CONCEPTS, customConfigurationError } from '../shared/custom.js';
+import { TARGET_MODELS, PROFILE_SOURCES, PROFILE_REVISION, selectedTargetProfile, installRegistry } from '../shared/target-models.js';
+import { loadCachedRegistry, REGISTRY_CACHE_KEY } from '../shared/registry-client.js';
 
 const LIMIT = 50_000;
 const inputLimit = () => 12_000;
 const byId = (id) => document.getElementById(id);
 const ui = {
   workspace: byId('workspace'), target: byId('target-model'), language: byId('response-language'),
+  version: byId('target-version'), profileSummary: byId('target-profile-summary'), profileSources: byId('target-profile-sources'), profileRules: byId('target-profile-rules'), toolbarRestore: byId('toolbar-restore'),
+  modelSearch: byId('target-model-search'), searchCount: byId('target-search-count'), profileStatus: byId('target-profile-status'), registryStatus: byId('registry-status'), registryRefresh: byId('registry-refresh'),
   badge: byId('provider-badge'), engineHint: byId('engine-hint'), processingNote: byId('processing-note'), apiSettings: byId('api-settings'),
   theme: byId('theme'), modes: byId('mode-options'), source: byId('source'), output: byId('output'),
   sourceCount: byId('source-count'), outputCount: byId('output-count'), sourceHint: byId('source-hint'),
@@ -33,6 +37,7 @@ const siteNames = { chatgpt: 'ChatGPT', claude: 'Claude', gemini: 'Gemini', perp
 let settings = { ...DEFAULT_SETTINGS };
 let initialized = false;
 let optimizing = false;
+let optimizeStarted = 0;
 let pageBusy = false;
 let copying = false;
 let revision = 0;
@@ -47,6 +52,21 @@ let apiChecking = false;
 let apiCheckRevision = 0;
 let apiOutcome = null;
 let pendingSettingWrites = 0;
+let registryBusy = false;
+let registryStatus = null;
+
+async function refreshRegistry(force = false) {
+  if (registryBusy) return;
+  registryBusy = true; ui.registryRefresh.disabled = true; ui.registryStatus.textContent = '모델 목록 확인 중…';
+  try {
+    const reply = await chrome.runtime.sendMessage({ type: 'MODEL_REGISTRY_STATUS', refresh: force });
+    if (!reply?.ok || !reply.registry || !reply.status) throw new Error('Registry unavailable');
+    const previous = settingsFingerprint();
+    installRegistry(reply.registry); registryStatus = reply.status;
+    if (previous !== settingsFingerprint()) { revision++; clearResult('모델 지침 갱신 · 다시 최적화'); persistDraft(); }
+  } catch { registryStatus = { ...registryStatus, error: '원격 목록을 확인하지 못해 저장된 목록을 사용합니다.' }; }
+  finally { registryBusy = false; ui.registryRefresh.disabled = false; paintSettings(); paint(); }
+}
 
 for (const [id, concept] of Object.entries(CUSTOM_CONCEPTS)) {
   const label = document.createElement('label');
@@ -67,7 +87,11 @@ function paintApiState() {
     : !apiState.configured ? '개인 Gemini API 키를 등록하면 최적화를 사용할 수 있습니다.'
     : !apiState.granted ? 'API 설정에서 Chrome의 Gemini 서버 접근 권한을 허용해 주세요.'
     : 'Optimize를 누르면 원문과 선택 설정이 Gemini API로 전송됩니다. 인증과 할당량은 실제 요청 시 확인됩니다.';
-  if (ready && optimizing) { state = 'sending'; title = 'Gemini API로 최적화 중…'; detail = '등록한 개인 키를 사용하는 외부 API 최적화를 요청하고 있습니다.'; }
+  if (ready && optimizing) {
+    const seconds = Math.floor((Date.now() - optimizeStarted) / 1000);
+    state = 'sending'; title = 'Gemini API로 최적화 중…';
+    detail = `응답 대기 ${seconds}초 / 최대 90초. 완성된 결과를 받은 뒤에만 표시합니다.`;
+  }
   else if (ready && apiOutcome?.model === settings.geminiModel) {
     state = apiOutcome.ok ? 'success' : 'error';
     title = apiOutcome.ok ? 'Gemini API 응답 확인됨' : '마지막 API 요청 실패';
@@ -125,7 +149,7 @@ function errorMessage(error, fallback) {
 }
 
 function settingsFingerprint(value = settings) {
-  return JSON.stringify([value.targetModel, value.responseLanguage, value.mode, value.promptLanguage, value.geminiModel,
+  return JSON.stringify([value.targetModel, selectedTargetProfile(value).id, selectedTargetProfile(value).revision, value.responseLanguage, value.mode, value.promptLanguage, value.geminiModel,
     ...(value.mode === 'custom' ? [value.customType, value.customType === 'manual' ? value.customInstructions : value.customConcepts] : [])]);
 }
 
@@ -133,12 +157,48 @@ function paintSettings() {
   ui.engineHint.textContent = '사용 모델: ' + settings.geminiModel + ' · 무료 여부와 사용 한도는 API 프로젝트 등급에 따릅니다.';
   ui.processingNote.textContent = 'Gemini API로 전송 · 자동 유료 전환 없음';
   ui.target.value = settings.targetModel;
+  const profile = selectedTargetProfile(settings);
+  const models = TARGET_MODELS[settings.targetModel];
+  const search = ui.modelSearch.value.trim().toLocaleLowerCase();
+  const filtered = models.filter(model => !search || [model.label, model.id, model.provider].some(text => text.toLocaleLowerCase().includes(search)));
+  const selectedId = settings.targetVariants[settings.targetModel];
+  const shown = [...filtered];
+  if (!shown.some(model => model.id === selectedId)) {
+    shown.unshift(models.find(model => model.id === selectedId) || { id: selectedId, label: selectedId + ' · 목록 없음 / 공통 지침', lifecycle: 'unknown' });
+  }
+  const catalogKey = JSON.stringify([settings.targetModel, PROFILE_REVISION, search, selectedId]);
+  if (ui.version.dataset.catalog !== catalogKey) {
+    ui.version.replaceChildren(...shown.map(model => {
+      const option = document.createElement('option');
+      const isNew = model.isNew && Date.now() - Date.parse(model.firstSeen) < 14 * 86400000;
+      option.value = model.id; option.textContent = (isNew ? 'NEW · ' : '') + model.label + (model.lifecycle === 'retired' ? ' · 지원 종료 / 공통 지침' : '');
+      option.dataset.brand = settings.targetModel;
+      return option;
+    }));
+    ui.version.dataset.catalog = catalogKey;
+  }
+  ui.version.value = selectedId;
+  ui.searchCount.textContent = '검색 결과 ' + filtered.length + ' / ' + models.length + '개 · NEW는 최근 14일 내 최초 발견 모델입니다.';
+  ui.profileSummary.textContent = profile.label + ' (' + selectedId + ') · ' + profile.summary;
+  ui.profileStatus.textContent = (profile.profileStatus === 'validated' ? '고정 샘플 평가 통과' : '기본·상속 프로필 · 성능 개선 미검증') + (profile.candidatePending ? ' · 신규 후보 검증 대기' : '') + ' · v' + profile.profileVersion;
+  if (selectedId !== profile.id) ui.profileStatus.textContent += ' · 저장된 모델을 찾지 못해 공통 지침 적용';
+  if (!registryBusy) ui.registryStatus.textContent = registryStatus?.error || ('목록 v' + (registryStatus?.version || '번들') + ' · ' + (registryStatus?.origin || 'bundled') + (registryStatus?.checkedAt ? ' · 확인 ' + new Date(registryStatus.checkedAt).toLocaleDateString('ko-KR') : ''));
+  ui.profileRules.replaceChildren(...[profile.summary, '원문의 명시적인 조건과 출력 형식을 우선하고, 작업에 필요한 지침만 적용합니다.', '세부 모델마다 차이가 확인되지 않은 경우 해당 계열의 공통 지침을 사용합니다.'].map(rule => {
+    const item = document.createElement('li'); item.textContent = rule; return item;
+  }));
+  ui.profileSources.replaceChildren(...profile.sources.map(id => {
+    const source = PROFILE_SOURCES[id]; const link = document.createElement('a');
+    link.href = source.url; link.textContent = source.title + ' ↗'; link.target = '_blank'; link.rel = 'noopener noreferrer'; return link;
+  }));
+  ui.profileSources.append(document.createTextNode('프로필 갱신: ' + profile.checked + ' · 같은 계열은 공통 지침을 공유합니다.'));
   ui.language.value = settings.responseLanguage;
   ui.theme.value = settings.theme;
   document.documentElement.dataset.theme = settings.theme;
   for (const radio of ui.modes.querySelectorAll('input')) radio.checked = radio.value === settings.mode;
   ui.toolbarEnabled.checked = settings.toolbarEnabled;
   ui.toolbarEnabled.disabled = !initialized;
+  ui.toolbarRestore.hidden = !settings.toolbarEnabled || !settings.toolbarMinimized;
+  ui.toolbarRestore.disabled = !initialized;
   ui.custom.hidden = settings.mode !== 'custom';
   ui.custom.disabled = !initialized;
   ui.customAuto.hidden = settings.customType !== 'auto';
@@ -302,7 +362,7 @@ async function reloadPage() {
 
 async function changeSetting(partial) {
   const beforeFingerprint = settingsFingerprint();
-  settings = normalizeSettings({ ...settings, ...partial });
+  settings = normalizeSettings({ ...settings, ...partial, targetVariants: { ...settings.targetVariants, ...partial.targetVariants } });
   const compilerChanged = beforeFingerprint !== settingsFingerprint();
   paintSettings();
   if (compilerChanged) {
@@ -329,7 +389,9 @@ async function optimize() {
   const text = ui.source.value;
   const currentSettings = { ...settings };
   const currentApiRevision = apiCheckRevision;
+  optimizeStarted = Date.now();
   optimizing = true;
+  const progressTimer = setInterval(() => paintApiState(), 1000);
   feedback();
   clearResult('요청을 정리하고 있어요');
   paint();
@@ -352,6 +414,7 @@ async function optimize() {
       feedback(errorMessage(error, '최적화 중 오류가 발생했습니다.'), 'error', true);
     }
   } finally {
+    clearInterval(progressTimer);
     optimizing = false;
     paint();
   }
@@ -479,13 +542,17 @@ ui.custom.addEventListener('change', event => {
   }
 });
 ui.customInstructions.addEventListener('input', () => changeSetting({ customInstructions: ui.customInstructions.value }));
-ui.target.addEventListener('change', () => changeSetting({ targetModel: ui.target.value }));
+ui.target.addEventListener('change', () => { ui.modelSearch.value = ''; changeSetting({ targetModel: ui.target.value }); });
+ui.modelSearch.addEventListener('input', paintSettings);
+ui.registryRefresh.addEventListener('click', () => refreshRegistry(true));
+ui.version.addEventListener('change', () => changeSetting({ targetVariants: { [settings.targetModel]: ui.version.value } }));
 ui.language.addEventListener('change', () => changeSetting({ responseLanguage: ui.language.value }));
 ui.theme.addEventListener('change', () => changeSetting({ theme: ui.theme.value }));
 ui.modes.addEventListener('change', (event) => {
   if (event.target.matches('input[name="mode"]')) changeSetting({ mode: event.target.value });
 });
-ui.toolbarEnabled.addEventListener('change', () => changeSetting({ toolbarEnabled: ui.toolbarEnabled.checked }));
+ui.toolbarEnabled.addEventListener('change', () => changeSetting({ toolbarEnabled: ui.toolbarEnabled.checked, toolbarMinimized: false }));
+ui.toolbarRestore.addEventListener('click', () => changeSetting({ toolbarMinimized: false }));
 ui.optimize.addEventListener('click', optimize);
 ui.importPage.addEventListener('click', importPage);
 ui.reconnectPage.addEventListener('click', reconnectPage);
@@ -511,6 +578,7 @@ document.addEventListener('keydown', (event) => {
 });
 
 async function initialize() {
+  registryStatus = await loadCachedRegistry().catch(() => null);
   const [saved, active] = await Promise.allSettled([
     getSettings(),
     chrome.tabs.query({ active: true, currentWindow: true }),
@@ -526,14 +594,15 @@ async function initialize() {
     refreshApiStatus(),
   ]);
   initialized = true;
-  for (const control of [ui.target, ui.language, ui.theme, ui.modes, ui.source, ui.toolbarEnabled]) control.disabled = false;
+  for (const control of [ui.target, ui.version, ui.modelSearch, ui.language, ui.theme, ui.modes, ui.source, ui.toolbarEnabled]) control.disabled = false;
   paintSettings();
   paint();
+  void refreshRegistry();
 }
 
 initialize().catch(() => {
   initialized = true;
-  for (const control of [ui.target, ui.language, ui.theme, ui.modes, ui.source, ui.toolbarEnabled]) control.disabled = false;
+  for (const control of [ui.target, ui.version, ui.modelSearch, ui.language, ui.theme, ui.modes, ui.source, ui.toolbarEnabled]) control.disabled = false;
   paintSettings();
   showPage();
   paint();
@@ -541,6 +610,14 @@ initialize().catch(() => {
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes[REGISTRY_CACHE_KEY] && !registryBusy) {
+    const previous = settingsFingerprint();
+    loadCachedRegistry().then(status => {
+      registryStatus = status;
+      if (previous !== settingsFingerprint()) { revision++; clearResult('모델 지침 갱신 · 다시 최적화'); persistDraft(); }
+      paintSettings(); paint();
+    }).catch(() => {});
+  }
   if ((area === 'local' || area === 'session') && changes['po-api-key:gemini']) {
     apiOutcome = null;
     refreshApiStatus();

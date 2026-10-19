@@ -1,7 +1,7 @@
 import { parseIntent } from './intent-parser.js';
 
 export const MAX_INPUT_CHARACTERS = 50000;
-const MODELS = ['chatgpt', 'claude', 'gemini', 'perplexity'];
+const MODELS = ['chatgpt', 'claude', 'gemini', 'other', 'perplexity'];
 const MODES = ['default', 'eco', 'precision', 'natural', 'custom'];
 const LANGUAGES = ['auto', 'ko', 'en', 'ja', 'zh'];
 

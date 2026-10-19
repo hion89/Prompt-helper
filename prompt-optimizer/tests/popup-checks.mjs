@@ -35,6 +35,21 @@ export async function runPopupChecks(cdp, compiled) {
     chrome.storage.session.set=async v=>{__sessionWrites.push(v)};
     chrome.storage.session.remove=async k=>{__removed.push(k)};
     chrome.runtime.sendMessage=async m=>{if(m.type==='API_STATUS')return {ok:true,status:{gemini:__api}};__compilerCalls++;window.__lastRequest=m;await new Promise(r=>setTimeout(r,__delay));return {ok:true,result:__result}};`);
+  const select = (selector, value) => read(`document.querySelector(${JSON.stringify(selector)}).value=${JSON.stringify(value)};document.querySelector(${JSON.stringify(selector)}).dispatchEvent(new Event('change',{bubbles:true}));`);
+  assert.deepEqual(await read('[...document.querySelector("#target-model").options].map(x=>x.value)'), ['chatgpt', 'claude', 'gemini', 'other']);
+  assert.equal(await read('[...document.querySelector("#target-version").options].every(x=>x.dataset.brand==="chatgpt")'), true);
+  await select('#target-version', 'gpt-4.1');
+  await select('#target-model', 'claude');
+  assert.equal(await read('[...document.querySelector("#target-version").options].every(x=>x.dataset.brand==="claude")'), true);
+  await select('#target-version', 'claude-haiku-5-5');
+  await select('#target-model', 'gemini');
+  assert.equal(await read('[...document.querySelector("#target-version").options].every(x=>x.dataset.brand==="gemini")'), true);
+  await select('#target-model', 'chatgpt');
+  assert.equal(await read('document.querySelector("#target-version").value'), 'gpt-4.1');
+  await select('#target-model', 'claude');
+  assert.equal(await read('document.querySelector("#target-version").value'), 'claude-haiku-5-5');
+  await waitFor('__settings.targetVariants?.claude==="claude-haiku-5-5" && __settings.targetVariants?.chatgpt==="gpt-4.1"');
+  pass('Only selected brand models are shown, and per-brand selections survive brand changes');
   for (const [selector, value] of [['#target-model', 'claude'], ['#response-language', 'en'], ['#theme', 'dark']]) {
     await read(`document.querySelector(${JSON.stringify(selector)}).value=${JSON.stringify(value)};document.querySelector(${JSON.stringify(selector)}).dispatchEvent(new Event('change',{bubbles:true}));`);
   }
@@ -165,6 +180,48 @@ export async function runPopupChecks(cdp, compiled) {
   assert.equal(await read('__settings.customInstructions.length>0'), true);
   assert.equal(await read('document.querySelector("#output").value'), '');
   pass('Manual Custom stores reusable instructions separately from source and clears stale results');
+
+  await read('document.querySelector("#optimize").click();');
+  await waitFor('document.querySelector("#output").value.length>0');
+  await select('#target-version', 'claude-opus-5-5');
+  assert.equal(await read('document.querySelector("#output").value'), '');
+  await read('window.__delay=150;document.querySelector("#optimize").click();');
+  await select('#target-version', 'claude-haiku-5-5');
+  await waitFor('document.querySelector("#optimize").dataset.loading==="false"');
+  assert.equal(await read('document.querySelector("#output").value'), '', 'an in-flight result for the old model cannot be applied');
+  assert.equal(await read('__lastRequest.settings.targetVariants.claude'), 'claude-opus-5-5');
+  await read('window.__delay=0;');
+  await read('__settings.toolbarMinimized=true;for(const listener of __storageListeners)listener({settings:{newValue:{...__settings}}},"local")');
+  await waitFor('!document.querySelector("#toolbar-restore").hidden');
+  await read('document.querySelector("#toolbar-restore").click()');
+  await waitFor('__settings.toolbarMinimized===false && document.querySelector("#toolbar-restore").hidden');
+  pass('Model changes invalidate old and in-flight results; popup restores a minimized icon');
+
+  await read(`document.querySelector('#target-model-search').value='definitely-no-match';document.querySelector('#target-model-search').dispatchEvent(new Event('input'));`);
+  assert.equal(await read('document.querySelector("#target-search-count").textContent.startsWith("검색 결과 0 /")'), true);
+  assert.equal(await read('document.querySelector("#target-version").value'), 'claude-haiku-5-5', 'search never changes saved choice');
+  await read(`(async()=>{document.querySelector('#target-model-search').value='';document.querySelector('#target-model-search').dispatchEvent(new Event('input'));
+    const module=await import('/shared/target-models.js');window.__updatedRegistry=module.registrySnapshot();
+    const original=__updatedRegistry.models.find(x=>x.brand==='claude'&&x.id==='general');
+    const originalProfile=__updatedRegistry.profiles.find(x=>x.id===original.profileId);
+    const id='claude-fixture-dynamic';const stamp=new Date().toISOString();
+    __updatedRegistry.models.push({...original,id,displayName:'Fixture Dynamic',profileId:'fixture-dynamic@1',profileVersion:1,candidateProfileId:'fixture-dynamic@2',firstSeen:stamp,lastUpdated:stamp,isNew:true});
+    __updatedRegistry.profiles.push({...originalProfile,id:'fixture-dynamic@1',modelId:id,status:'fallback',confidence:'low'});
+    __updatedRegistry.profiles.push({...originalProfile,id:'fixture-dynamic@2',modelId:id,version:2,status:'candidate',confidence:'low'});
+    __updatedRegistry.version+=100;__updatedRegistry.profileRevision='fixture-dynamic';
+    window.__sendBeforeRegistry=chrome.runtime.sendMessage;
+    chrome.runtime.sendMessage=async m=>m.type==='MODEL_REGISTRY_STATUS'?{ok:true,registry:__updatedRegistry,status:{version:__updatedRegistry.version,origin:'remote'}}:__sendBeforeRegistry(m);
+    document.querySelector('#registry-refresh').click();})()`);
+  await waitFor('[...document.querySelector("#target-version").options].some(x=>x.value==="claude-fixture-dynamic")');
+  await select('#target-version', 'claude-fixture-dynamic');
+  assert.equal(await read('document.querySelector("#target-version").selectedOptions[0].textContent.startsWith("NEW ·")'), true);
+  assert.equal(await read('document.querySelector("#target-profile-status").textContent.includes("신규 후보 검증 대기")'), true);
+  await read(`document.querySelector('#target-model-search').value='dynamic';document.querySelector('#target-model-search').dispatchEvent(new Event('input'));`);
+  assert.equal(await read('document.querySelector("#target-version").options.length'), 1);
+  await select('#target-model', 'chatgpt');
+  assert.equal(await read('document.querySelector("#target-version").value'), 'gpt-4.1');
+  await read('chrome.runtime.sendMessage=__sendBeforeRegistry;');
+  pass('Dynamic JSON refresh adds searchable NEW models and shows inactive candidate status without an extension reload');
 
   // Restore a useful, neutral state for the caller screenshot.
   await read('document.querySelector("#theme").value="light";document.querySelector("#theme").dispatchEvent(new Event("change",{bubbles:true}));');

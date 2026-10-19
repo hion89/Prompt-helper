@@ -88,7 +88,7 @@ async function runEvaluation() {
     const started = performance.now();
     let reply; let error = '';
     try {
-      reply = await chrome.runtime.sendMessage({ type: 'OPTIMIZE', text: testCase.source, settings: { ...testCase.settings, geminiModel: settings.geminiModel, geminiModelSelected: settings.geminiModelSelected } });
+      reply = await chrome.runtime.sendMessage({ type: 'OPTIMIZE', text: testCase.source, settings: { ...testCase.settings, targetVariants: settings.targetVariants, geminiModel: settings.geminiModel, geminiModelSelected: settings.geminiModelSelected } });
       if (!reply?.ok) throw new Error(reply?.error || '최적화 요청에 실패했습니다.');
     } catch (failure) { error = failure?.message || String(failure); }
     const row = scoreEvaluationCase(testCase, reply?.result, Math.round(performance.now() - started), error);
@@ -98,6 +98,7 @@ async function runEvaluation() {
   report = {
     schema: 'prompt-optimizer-benchmark', schemaVersion: 1,
     extensionVersion: chrome.runtime.getManifest().version,
+    targetVariants: settings.targetVariants,
     model: settings.geminiModel, createdAt: new Date().toISOString(), stoppedEarly: rows.length < EVALUATION_CASES.length,
     scoreFormula: { preservation: 0.45, intent: 0.20, promptLanguage: 0.20, cleanStart: 0.15 },
     summary, cases: rows,

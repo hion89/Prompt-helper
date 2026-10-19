@@ -11,9 +11,9 @@ from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_DIRECTORIES = (
     'assets/icons', 'background', 'content', 'core', 'diagnostics',
-    'evaluation', 'help', 'options', 'popup', 'providers', 'shared',
+    'evaluation', 'help', 'options', 'popup', 'providers', 'shared', 'registry',
 )
-ALLOWED_SUFFIXES = {'.js', '.css', '.html', '.png'}
+ALLOWED_SUFFIXES = {'.js', '.css', '.html', '.png', '.json'}
 manifest = json.loads((ROOT / 'manifest.json').read_text(encoding='utf-8'))
 package = json.loads((ROOT / 'package.json').read_text(encoding='utf-8'))
 assert manifest['version'] == package['version'], 'Manifest/package versions differ'

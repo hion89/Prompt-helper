@@ -3,18 +3,29 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { DEFAULT_REGISTRY } from '../shared/registry-seed.js';
+import { validateRegistry, REGISTRY_SCHEMA } from '../shared/registry-schema.js';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = p => readFile(path.join(root, p), 'utf8');
 const manifest = JSON.parse(await read('manifest.json'));
+assert.deepEqual(validateRegistry(JSON.parse(await read('registry/default-registry.json'))), DEFAULT_REGISTRY, 'Generated seed must match registry JSON');
+assert.deepEqual(JSON.parse(await read('registry/registry.schema.json')), REGISTRY_SCHEMA, 'Exported schema must match validator');
+const publicDirectory = path.resolve(root, '../docs/registry');
+const registryManifest = JSON.parse(await readFile(path.join(publicDirectory, 'manifest.json'), 'utf8'));
+const registryPayload = await readFile(path.join(publicDirectory, registryManifest.file));
+assert.equal(createHash('sha256').update(registryPayload).digest('hex'), registryManifest.sha256);
+assert.equal(registryPayload.length, registryManifest.bytes);
+assert.equal(validateRegistry(JSON.parse(registryPayload)).version, registryManifest.version);
 assert.equal(manifest.manifest_version, 3);
 assert.equal(manifest.background.type, 'module');
 assert.deepEqual([...manifest.permissions].sort(), ['storage']);
-assert(!manifest.host_permissions, 'Static matching content scripts need no additional host permission.');
+assert.deepEqual(manifest.host_permissions, ['https://hion89.github.io/Prompt-helper/registry/*']);
 assert(!manifest.externally_connectable);
 assert(!manifest.web_accessible_resources);
 assert(!/unsafe-eval|unsafe-inline/.test(manifest.content_security_policy.extension_pages));
 assert.deepEqual(manifest.optional_host_permissions, ['https://generativelanguage.googleapis.com/*']);
-assert.equal(manifest.content_security_policy.extension_pages, "script-src 'self'; object-src 'none'; base-uri 'none'; connect-src https://generativelanguage.googleapis.com");
+assert.equal(manifest.content_security_policy.extension_pages, "script-src 'self'; object-src 'none'; base-uri 'none'; connect-src https://generativelanguage.googleapis.com https://hion89.github.io");
 const references = [
   manifest.background.service_worker, manifest.action.default_popup, manifest.options_ui.page,
   ...Object.values(manifest.icons), ...Object.values(manifest.action.default_icon),
@@ -48,7 +59,7 @@ for (const file of files) {
   }
   if (/[/\\](core|popup|content|background|providers|shared)[/\\]/.test(file)) {
     assert(!/\beval\s*\(|new Function\s*\(/.test(source), 'CSP-unsafe code: ' + file);
-    assert(!/\bfetch\s*\(|XMLHttpRequest|WebSocket/.test(source) || file.endsWith('remote-optimizer.js'), 'Unexpected network request: ' + file);
+    assert(!/\bfetch\s*\(|XMLHttpRequest|WebSocket/.test(source) || file.endsWith('remote-optimizer.js') || file.endsWith('registry-client.js'), 'Unexpected network request: ' + file);
   }
 }
 for (const htmlPath of [manifest.action.default_popup, manifest.options_ui.page, 'help/help.html', 'diagnostics/diagnostics.html', 'evaluation/evaluation.html']) {

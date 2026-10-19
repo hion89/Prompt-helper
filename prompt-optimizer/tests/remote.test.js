@@ -140,7 +140,7 @@ test('Gemini model listing uses a read-only request and filters non-generative m
 });
 test('the explicitly selected Gemini model is used for generation and diagnostics', async () => {
   const fetchImpl = async (url) => {
-    assert.match(url, /models\/gemini-2.5-flash:generateContent$/);
+    assert.match(url, /models\/gemini-2.5-flash:streamGenerateContent\?alt=sse$/);
     return { ok: false, status: 404, json: async () => ({ error: { status: 'NOT_FOUND' } }) };
   };
   await assert.rejects(

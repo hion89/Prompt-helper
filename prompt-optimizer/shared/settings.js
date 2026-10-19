@@ -1,12 +1,14 @@
 import { MAX_CUSTOM_INSTRUCTIONS, normalizeCustomConcepts } from './custom.js';
+import { TARGET_BRANDS, normalizeTargetId } from './target-models.js';
 
 export const DEFAULT_SETTINGS = Object.freeze({
   targetModel: 'chatgpt', responseLanguage: 'auto', mode: 'default', theme: 'system', promptLanguage: 'auto', geminiModel: 'gemini-3.5-flash-lite', geminiModelSelected: false,
-  toolbarEnabled: true, toolbarPositions: {},
+  targetVariants: Object.freeze({ chatgpt: 'general', gemini: 'general', claude: 'general', other: 'general' }),
+  toolbarEnabled: true, toolbarMinimized: false, toolbarPositions: {},
   customType: 'auto', customInstructions: '', customConcepts: Object.freeze(['accuracy', 'clarity']),
 });
 const choices = {
-  targetModel: ['chatgpt', 'claude', 'gemini', 'perplexity'],
+  targetModel: ['chatgpt', 'claude', 'gemini', 'other'],
   responseLanguage: ['auto', 'ko', 'en', 'ja', 'zh'],
   mode: ['default', 'eco', 'precision', 'natural', 'custom'],
   customType: ['auto', 'manual'],
@@ -22,6 +24,8 @@ export function normalizeSettings(value = {}) {
   if (typeof value.geminiModel === 'string' && /^gemini-[a-z0-9.-]{1,80}$/.test(value.geminiModel)
       && (value.geminiModel !== 'gemini-2.5-flash-lite' || result.geminiModelSelected)) result.geminiModel = value.geminiModel;
   if (typeof value.toolbarEnabled === 'boolean') result.toolbarEnabled = value.toolbarEnabled;
+  if (typeof value.toolbarMinimized === 'boolean') result.toolbarMinimized = value.toolbarMinimized;
+  result.targetVariants = Object.fromEntries(Object.keys(TARGET_BRANDS).map(brand => [brand, normalizeTargetId(brand, value.targetVariants?.[brand])]));
   if (value.toolbarPositions && typeof value.toolbarPositions === 'object' && !Array.isArray(value.toolbarPositions)) {
     const positions = {};
     for (const site of ['chatgpt', 'claude', 'gemini', 'perplexity']) {
@@ -45,7 +49,8 @@ export async function getSettings() {
 let pendingWrite = Promise.resolve();
 export function saveSettings(partial) {
   const next = pendingWrite.catch(() => {}).then(async () => {
-    const settings = normalizeSettings({ ...await getSettings(), ...partial });
+    const previous = await getSettings();
+    const settings = normalizeSettings({ ...previous, ...partial, targetVariants: { ...previous.targetVariants, ...partial.targetVariants } });
     await chrome.storage.local.set({ settings });
     return settings;
   });
