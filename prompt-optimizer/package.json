@@ -1,6 +1,6 @@
 {
   "name": "malgyeol",
-  "version": "1.13.0",
+  "version": "1.13.1",
   "private": true,
   "type": "module",
   "description": "Malgyeol: a Manifest V3 Gemini prompt optimizer",

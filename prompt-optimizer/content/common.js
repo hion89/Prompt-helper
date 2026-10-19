@@ -16,9 +16,9 @@
   style.textContent = `
     :host { color-scheme: light dark; }
     * { box-sizing: border-box; }
-    .panel { --bg:#fff; --fg:#24302b; --muted:#627269; --line:#dce5df; --accent:#267754; --hover:#eaf5ee;
+    .panel { --bg:#fffaf0; --fg:#193b30; --muted:#627269; --line:#dce5df; --accent:#194f40; --hover:#eaf5ee;
       width:max-content;max-width:calc(100vw - 24px);font:12px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--fg); }
-    .panel.dark { --bg:#1c2722;--fg:#e7f1eb;--muted:#aec3b6;--line:#3a4d40;--accent:#a3e5bd;--hover:#304b3a; }
+    .panel.dark { --bg:#19372d;--fg:#e7f1eb;--muted:#aec3b6;--line:#3a4d40;--accent:#c0d8b6;--hover:#304b3a; }
     .bar { display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:5px 7px;background:var(--bg);border:1px solid var(--line);border-radius:11px;
       box-shadow:0 4px 18px #071c1620;pointer-events:auto; }
     button { appearance:none;border:0;border-radius:7px;background:transparent;color:var(--fg);font:inherit;white-space:nowrap;padding:6px 8px;cursor:pointer; }

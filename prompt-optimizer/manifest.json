@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "말결 — AI 프롬프트 최적화",
-  "version": "1.13.0",
+  "version": "1.13.1",
   "description": "내 뜻을 살리는 프롬프트. 개인 Gemini API 키로 요청의 의도와 조건을 분석하고 대상 AI 모델에 맞는 프롬프트로 다듬습니다.",
   "minimum_chrome_version": "112",
   "permissions": [

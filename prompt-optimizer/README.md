@@ -1,8 +1,8 @@
-# 말결 — AI 프롬프트 최적화 1.13.0
+# 말결 — AI 프롬프트 최적화 1.13.1
 
 **내 뜻을 살리는 프롬프트.** 기존 Prompt Optimizer의 새 이름은 **말결(Malgyeol)**입니다. 기존 확장 항목을 업데이트하면 API 키와 설정을 그대로 사용합니다.
 
-새 홍보 자료는 [말결 1.13.0 브랜드 자료](marketing/malgyeol-1.13.0/README.md)에 있습니다. `python tools/package-brand-release.py`로 스토어 업로드용 ZIP과 이미지·문구 묶음을 함께 만듭니다.
+새 홍보 자료는 [말결 1.13.1 브랜드 자료](marketing/malgyeol-1.13.1/README.md)에 있습니다. `python tools/package-brand-release.py`로 스토어 업로드용 ZIP과 이미지·문구 묶음을 함께 만듭니다.
 
 자연어 요청을 Gemini API로 분석하고, OpenAI·Anthropic·Google 및 기타 제공사의 세부 모델에 맞는 프롬프트로 재작성하는 Chrome 확장 프로그램입니다. 최적화 엔진은 Gemini로 고정되어 있으며 자동 실행 모델 전환은 없습니다. 기타 제공사의 목록은 OpenRouter에서 수집하며 확장 사용자의 요청을 OpenRouter로 중계하지 않습니다.
 

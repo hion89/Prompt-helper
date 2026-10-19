@@ -1,7 +1,0 @@
-Use case: ads-marketing
-Asset type: original abstract brand artwork for a Korean AI prompt editor named Malgyeol (meaning texture and grain of language). No typography will be part of this artwork; exact Korean text will be typeset separately in the project.
-Primary request: A sophisticated editorial 3D paper sculpture visualizing rough strands of thought gently aligning into three elegant flowing ribbons. Warm ivory paper ribbons with mint green edges, some fine pale green threads and subtle grain, airy folded curves. A suggestion of a speech bubble formed by the overall negative space, abstract not a literal UI.
-Scene/backdrop: uniform pale warm ivory #f7f5ed background, soft studio lighting, calm precise Korean stationery design aesthetic.
-Composition: wide 3:2 landscape; sculptural ribbons centered toward the right half, abundant clean empty space on left and edges to support cropping in small and wide promotional tiles. Forms readable at thumbnail scale.
-Palette: warm ivory, deep forest green #204e40, sage #a8c9b2, restrained pale mint. Elegant tangible paper, delicate shadows, subtle print texture.
-Constraints: no words, no letters, no numerals, no watermarks, no logos of other companies, no fake application UI, no charts, no performance claims. Finished premium brand campaign art, not a template.

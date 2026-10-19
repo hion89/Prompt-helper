@@ -1,4 +1,4 @@
-"""Render Malgyeol's editable SVG icon through the shared Node/Chrome renderer."""
+"""Scale Malgyeol's supplied PNG logo with the shared Node/Chrome renderer."""
 from pathlib import Path
 import subprocess
 

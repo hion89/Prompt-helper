@@ -44,7 +44,7 @@ marketing = (root / 'marketing/MARKETING_KIT.md').read_text(encoding='utf8')
 listing += marketing.split('## 스토어 소개 · 복사용\n\n', 1)[1].split('\n## 짧은 소개', 1)[0]
 listing += f'''\n\n## 이번 업데이트 · {version}
 
-Prompt Optimizer가 ‘말결’이라는 새 이름과 디자인으로 바뀌었습니다. 새 아이콘, 홍보 이미지와 사용 안내를 적용했습니다. 기존 설정과 개인 Gemini API 키, 최적화 기능은 유지됩니다. 기존 항목을 업데이트해 사용하세요.
+사용자가 제공한 한글 말결 로고를 적용하고 딥 그린·크림 디자인으로 화면과 홍보 이미지를 다시 구성했습니다. 기존 설정과 개인 Gemini API 키, 최적화 기능은 유지됩니다. 기존 항목을 업데이트해 사용하세요.
 
 ## 공개 URL · 기존 주소 유지
 
@@ -54,7 +54,7 @@ Prompt Optimizer가 ‘말결’이라는 새 이름과 디자인으로 바뀌�
 - 문의: dominicjjung@gmail.com
 '''
 (kit / 'listing/STORE-LISTING-KO.md').write_text(listing, encoding='utf8')
-(kit / 'listing/REVIEW-NOTES.md').write_text('''말결은 기존 Prompt Optimizer의 이름과 디자인을 변경한 동일 확장 프로그램입니다. 1.12.0 대비 권한, 개인 Gemini API 키 저장 방식과 요청 전송 경로는 변경하지 않았습니다. 기존 스토어 항목에 새 패키지를 업로드하여 업데이트합니다.
+(kit / 'listing/REVIEW-NOTES.md').write_text('''말결은 기존 Prompt Optimizer의 이름과 디자인을 변경한 동일 확장 프로그램입니다. 1.13.0 대비 권한, 개인 Gemini API 키 저장 방식과 요청 전송 경로는 변경하지 않았습니다. 기존 스토어 항목에 새 패키지를 업로드하여 업데이트합니다.
 
 옵션 화면에서 심사자가 직접 발급한 Gemini API 키를 등록하고 API 서버 연결 권한을 허용한 뒤 팝업에 요청을 입력해 Optimize를 실행합니다. 유효한 키 없이는 실제 API 재작성을 실행할 수 없습니다. 키는 개발자에게 보내거나 심사 메모에 기재하지 않습니다.
 
