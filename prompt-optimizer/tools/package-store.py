@@ -50,7 +50,7 @@ for name, content in files.items():
 submission = ROOT / 'store-submission'
 upload = submission / 'upload'
 upload.mkdir(parents=True, exist_ok=True)
-target = upload / ('prompt-optimizer-' + manifest['version'] + '.zip')
+target = upload / ('malgyeol-' + manifest['version'] + '.zip')
 with ZipFile(target, 'w', compression=ZIP_DEFLATED, compresslevel=9) as archive:
     for name, content in sorted(files.items()):
         info = ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
@@ -72,6 +72,7 @@ metadata.update({
     'packageSha256': hashlib.sha256(target.read_bytes()).hexdigest(),
     'manifestVersion': manifest['manifest_version'],
     'permissions': manifest['permissions'],
+    'hostPermissions': manifest.get('host_permissions', []),
     'optionalHostPermissions': manifest['optional_host_permissions'],
     'packageFileCount': len(files),
     'validation': {'archiveStructure': 'passed', 'runtimeImports': 'passed',

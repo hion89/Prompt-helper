@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Prompt Optimizer",
-  "version": "1.12.0",
-  "description": "개인 Gemini API 키로 자연어 요청을 분석해 맞춤 프롬프트로 재작성합니다.",
+  "name": "말결 — AI 프롬프트 최적화",
+  "version": "1.13.0",
+  "description": "내 뜻을 살리는 프롬프트. 개인 Gemini API 키로 요청의 의도와 조건을 분석하고 대상 AI 모델에 맞는 프롬프트로 다듬습니다.",
   "minimum_chrome_version": "112",
   "permissions": [
     "storage"
@@ -13,7 +13,7 @@
   },
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "Prompt Optimizer",
+    "default_title": "말결 — 내 뜻을 살리는 프롬프트",
     "default_icon": {
       "16": "assets/icons/icon16.png",
       "32": "assets/icons/icon32.png",
@@ -72,5 +72,6 @@
   ],
   "host_permissions": [
     "https://hion89.github.io/Prompt-helper/registry/*"
-  ]
+  ],
+  "short_name": "말결"
 }

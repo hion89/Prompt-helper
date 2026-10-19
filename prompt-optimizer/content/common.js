@@ -49,7 +49,7 @@
   const bar = document.createElement('div');
   bar.className = 'bar';
   bar.setAttribute('role', 'toolbar');
-  bar.setAttribute('aria-label', `Prompt Optimizer · ${site.name}`);
+  bar.setAttribute('aria-label', `말결 · ${site.name}`);
   const dragButton = document.createElement('button');
   dragButton.type = 'button';
   dragButton.className = 'drag';
@@ -85,7 +85,7 @@
   miniIcon.type = 'button';
   miniIcon.className = 'mini-icon';
   miniIcon.textContent = '✦';
-  miniIcon.setAttribute('aria-label', 'Prompt Optimizer 펼치기');
+  miniIcon.setAttribute('aria-label', '말결 펼치기');
   const status = document.createElement('div');
   status.className = 'status';
   status.setAttribute('role', 'status');
@@ -193,7 +193,7 @@
     modeBadge.dataset.ready = String(apiState?.ready === true);
     modeBadge.title = `Gemini API ${apiLabel} · 대상 ${destination} · ${name}. 대상 모델은 팝업에서 직접 선택합니다. 실제 웹 AI의 모델을 변경하지 않습니다. 키와 권한 준비 상태이며 실제 인증과 할당량은 요청 시 확인합니다.`;
     panel.classList.toggle('minimized', settings.toolbarMinimized === true);
-    miniIcon.title = `Prompt Optimizer 펼치기 · ${destination} · ${name}. 끌어서 이동할 수 있습니다.`;
+    miniIcon.title = `말결 펼치기 · ${destination} · ${name}. 끌어서 이동할 수 있습니다.`;
     panel.classList.toggle('dark', settings.theme === 'dark' || ((settings.theme === 'system' || settings.theme === 'auto') && systemTheme.matches));
     syncToolbarRuntime();
     updateButtons();
@@ -220,7 +220,7 @@
 
   function updateButtons() {
     miniIcon.textContent = operation ? '…' : '✦';
-    miniIcon.setAttribute('aria-label', operation ? '최적화 진행 중 · Prompt Optimizer 펼치기' : 'Prompt Optimizer 펼치기');
+    miniIcon.setAttribute('aria-label', operation ? '최적화 진행 중 · 말결 펼치기' : '말결 펼치기');
     optimizeButton.disabled = Boolean(operation) || apiState?.ready !== true;
     optimizeButton.title = apiState?.ready ? '등록한 개인 키로 Gemini API에 원문과 설정을 보내 최적화합니다.' : '확장 프로그램 팝업에서 Gemini API 키와 연결 권한을 확인해 주세요.';
     optimizeButton.textContent = operation ? '최적화 중…' : '✦ Optimize';
