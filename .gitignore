@@ -1,9 +1,0 @@
-/prompt-optimizer/store-submission/
-/prompt-optimizer/.test-artifacts/
-/prompt-optimizer.zip
-/Backup-codes-*.txt
-/.env
-/.env.*
-/*.pem
-/*.p12
-/*.pfx
