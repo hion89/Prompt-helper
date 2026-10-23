@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": 9,
-  "file": "registry-9-5875fd515bc0.json",
-  "sha256": "5875fd515bc00d4b71249e834909edebc0f26f1aa23a65858647dcba8c033e48",
-  "bytes": 762321,
-  "generatedAt": "2026-10-22T07:32:56.698Z"
+  "version": 10,
+  "file": "registry-10-125bb52aa3d0.json",
+  "sha256": "125bb52aa3d0e6c2f9e78809899e3d03a8553629b8bb69594bcc3a873c0363ef",
+  "bytes": 762322,
+  "generatedAt": "2026-10-23T07:29:50.615Z"
 }
