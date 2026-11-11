@@ -1,0 +1,19 @@
+{
+  "name": "malgyeol-prompt-core-reference",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline historical Malgyeol prompt compiler reference, extracted from extension 1.13.1",
+  "license": "MIT",
+  "exports": {
+    "./compiler": "./core/prompt-builder.js",
+    ".": "./providers/local-optimizer.js"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "example": "node examples/basic.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

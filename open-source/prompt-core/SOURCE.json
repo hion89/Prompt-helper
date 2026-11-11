@@ -1,0 +1,109 @@
+{
+  "repository": "https://github.com/hion89/Prompt-helper",
+  "commit": "9a8a71e89a6d79e8e141c11822309e81bcc55130",
+  "extensionVersion": "1.13.1",
+  "scope": "Historical local compiler only; not the current Gemini optimizer",
+  "modifications": "Copied source and original compiler tests byte-for-byte. Packaging, documentation, example and safety tests are new.",
+  "files": [
+    {
+      "path": "core/adapters/base.js",
+      "originalPath": "prompt-optimizer/core/adapters/base.js",
+      "sha256": "a1d7977b55b41c795ae9f1f186fd085c0d59624a349866acf390aaddab0173a9"
+    },
+    {
+      "path": "core/adapters/chatgpt.js",
+      "originalPath": "prompt-optimizer/core/adapters/chatgpt.js",
+      "sha256": "bc96ac640d48282f35ea19a2269f11502d28d317de9711ec3afc491d3bd7dc52"
+    },
+    {
+      "path": "core/adapters/claude.js",
+      "originalPath": "prompt-optimizer/core/adapters/claude.js",
+      "sha256": "07bf29e7d9bcabc12432ce8b862c469ccfd194a22f35ab3edbfdd6097089bdba"
+    },
+    {
+      "path": "core/adapters/gemini.js",
+      "originalPath": "prompt-optimizer/core/adapters/gemini.js",
+      "sha256": "fd5e26e7656b0960be1b879cc4de0b7d2cab756a29ce50dacc80ae600476bccb"
+    },
+    {
+      "path": "core/adapters/index.js",
+      "originalPath": "prompt-optimizer/core/adapters/index.js",
+      "sha256": "17dca9e8442989a996ba545b399668f583ddf0a44df401150ee7f938db464c76"
+    },
+    {
+      "path": "core/adapters/perplexity.js",
+      "originalPath": "prompt-optimizer/core/adapters/perplexity.js",
+      "sha256": "0b5dcc9fac357b42ca1880176d247b571296e959ec51e3543e0b0b3a7fdcd9dc"
+    },
+    {
+      "path": "core/adapters/profiles.js",
+      "originalPath": "prompt-optimizer/core/adapters/profiles.js",
+      "sha256": "5836df4c89ffdb49109df9e1bc631728eba17f3f0e21d1bba03904a112f369a3"
+    },
+    {
+      "path": "core/intent-parser.js",
+      "originalPath": "prompt-optimizer/core/intent-parser.js",
+      "sha256": "5fd37307e6cf5a0981f1cf80de2afe1cdf33e81816551e85480239d17de869fa"
+    },
+    {
+      "path": "core/languages/language-adapter.js",
+      "originalPath": "prompt-optimizer/core/languages/language-adapter.js",
+      "sha256": "d47c91e5c596ae86e769bcc480c45c24729cad54c46949154946c4e670db2c5c"
+    },
+    {
+      "path": "core/languages/messages.js",
+      "originalPath": "prompt-optimizer/core/languages/messages.js",
+      "sha256": "0fcddffd3f992f752c189dc46967104e77ff388d45fcf92f2c291b4ea766fbb6"
+    },
+    {
+      "path": "core/modes/default.js",
+      "originalPath": "prompt-optimizer/core/modes/default.js",
+      "sha256": "625bbdf82cdd1c9241958f3304339a770ff0313d0c869a7c3bab8e24e5a9a381"
+    },
+    {
+      "path": "core/modes/eco.js",
+      "originalPath": "prompt-optimizer/core/modes/eco.js",
+      "sha256": "9a0ef6a7111b20aa9e2995882a4e5720be5336c03afd04e8377b7eaa1e0a62cd"
+    },
+    {
+      "path": "core/modes/index.js",
+      "originalPath": "prompt-optimizer/core/modes/index.js",
+      "sha256": "48b2b9f3343b9d88553a50623533d8f31ee3dba24f83d9dfef8c4d679e88c330"
+    },
+    {
+      "path": "core/modes/natural.js",
+      "originalPath": "prompt-optimizer/core/modes/natural.js",
+      "sha256": "1930bdb3bd709ac1bac7ceef3cb19309b3cd77f46c8b2e138b9b6b11439a0b98"
+    },
+    {
+      "path": "core/modes/precision.js",
+      "originalPath": "prompt-optimizer/core/modes/precision.js",
+      "sha256": "ad1e3b34535972341f82009a95b4300de62fe194d0b541c84d87555eadf03412"
+    },
+    {
+      "path": "core/prompt-builder.js",
+      "originalPath": "prompt-optimizer/core/prompt-builder.js",
+      "sha256": "ec1c6fe1b0506f4acd00c74a0ba5e9b746d2150541f65936663cc1e88191ac51"
+    },
+    {
+      "path": "core/prompt-ir.js",
+      "originalPath": "prompt-optimizer/core/prompt-ir.js",
+      "sha256": "172db465870eb7522261913f166f9ec6ae09ba54c6c8103b5cdab9bfd4d495b1"
+    },
+    {
+      "path": "providers/local-optimizer.js",
+      "originalPath": "prompt-optimizer/providers/local-optimizer.js",
+      "sha256": "47c5513fdf7a094b4a2956374a27d937b627f0dc73d9fea4ccf5c833363791af"
+    },
+    {
+      "path": "providers/optimizer-provider.js",
+      "originalPath": "prompt-optimizer/providers/optimizer-provider.js",
+      "sha256": "b33814291080ff24572f96df3a0f2ead6069e46afaae5fb022c5c845f115d0ee"
+    },
+    {
+      "path": "tests/compiler.test.js",
+      "originalPath": "prompt-optimizer/tests/compiler.test.js",
+      "sha256": "4f74893da16740169e67d2947ecb95f9f41af65e8a02448d56cffc1d46d41471"
+    }
+  ]
+}

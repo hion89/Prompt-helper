@@ -1,0 +1,2 @@
+# Keep source provenance hashes reproducible on Windows and Linux.
+open-source/prompt-core/** text eol=lf
