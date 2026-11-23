@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": 39,
-  "file": "registry-39-488cbeb3c713.json",
-  "sha256": "488cbeb3c713fb1ee31d53a75062efa15d6b41fe2183b517150135b6206895fb",
-  "bytes": 838601,
-  "generatedAt": "2026-11-22T09:44:19.105Z"
+  "version": 40,
+  "file": "registry-40-cabb30c4d6b2.json",
+  "sha256": "cabb30c4d6b2436c13b9db2634b1ec947b4e8a376512bd2abd27952bf37e9a7e",
+  "bytes": 838589,
+  "generatedAt": "2026-11-23T10:43:48.357Z"
 }
